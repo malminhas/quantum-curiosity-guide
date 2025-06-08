@@ -1,12 +1,123 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ArrowRight, Zap, Cpu, BookOpen, PlayCircle, BarChart3, Circuit } from "lucide-react";
+import QubitVisualization from "@/components/QubitVisualization";
+import GroverInterface from "@/components/GroverInterface";
+import QuantumConcepts from "@/components/QuantumConcepts";
+import CircuitVisualization from "@/components/CircuitVisualization";
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState("concepts");
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.1"%3E%3Cpath d="m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+        <div className="relative container mx-auto px-4 py-16">
+          <div className="text-center space-y-6">
+            <div className="inline-flex items-center space-x-2 bg-blue-600/20 rounded-full px-4 py-2 backdrop-blur-sm">
+              <Zap className="h-4 w-4 text-blue-400" />
+              <span className="text-blue-200 text-sm font-medium">Quantum Computing Demystified</span>
+            </div>
+            <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+              Quantum Computing
+            </h1>
+            <p className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto">
+              Explore the fascinating world of quantum computing, understand qubits, and experience real quantum algorithms
+            </p>
+            <div className="flex flex-wrap justify-center gap-4 mt-8">
+              <Button 
+                size="lg" 
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                onClick={() => setActiveTab("concepts")}
+              >
+                <BookOpen className="mr-2 h-5 w-5" />
+                Learn Concepts
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="border-purple-400/50 text-purple-200 hover:bg-purple-600/20"
+                onClick={() => setActiveTab("grover")}
+              >
+                <PlayCircle className="mr-2 h-5 w-5" />
+                Try Grover's Algorithm
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-12">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="flex justify-center mb-8">
+            <TabsList className="grid grid-cols-4 w-full max-w-2xl bg-slate-800/50 backdrop-blur-sm">
+              <TabsTrigger value="concepts" className="data-[state=active]:bg-blue-600">
+                <BookOpen className="mr-2 h-4 w-4" />
+                Concepts
+              </TabsTrigger>
+              <TabsTrigger value="qubits" className="data-[state=active]:bg-purple-600">
+                <Cpu className="mr-2 h-4 w-4" />
+                Qubits
+              </TabsTrigger>
+              <TabsTrigger value="circuits" className="data-[state=active]:bg-cyan-600">
+                <Circuit className="mr-2 h-4 w-4" />
+                Circuits
+              </TabsTrigger>
+              <TabsTrigger value="grover" className="data-[state=active]:bg-green-600">
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Grover's
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="concepts" className="space-y-6">
+            <QuantumConcepts />
+          </TabsContent>
+
+          <TabsContent value="qubits" className="space-y-6">
+            <QubitVisualization />
+          </TabsContent>
+
+          <TabsContent value="circuits" className="space-y-6">
+            <CircuitVisualization />
+          </TabsContent>
+
+          <TabsContent value="grover" className="space-y-6">
+            <GroverInterface />
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-slate-900/80 backdrop-blur-sm border-t border-slate-700">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center space-y-4">
+            <div className="flex justify-center space-x-6">
+              <Badge variant="outline" className="border-blue-400/50 text-blue-300">
+                Quantum Education
+              </Badge>
+              <Badge variant="outline" className="border-purple-400/50 text-purple-300">
+                Interactive Learning
+              </Badge>
+              <Badge variant="outline" className="border-cyan-400/50 text-cyan-300">
+                Real Algorithms
+              </Badge>
+            </div>
+            <Separator className="bg-slate-700" />
+            <p className="text-slate-400">
+              Built with modern web technologies and integrated with quantum computing APIs
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
