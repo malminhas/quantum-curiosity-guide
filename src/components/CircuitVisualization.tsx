@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Circuit, Play, RotateCcw, Zap } from "lucide-react";
+import { CircuitBoard, Play, RotateCcw, Zap } from "lucide-react";
 
 const CircuitVisualization = () => {
   const [selectedGates, setSelectedGates] = useState<string[]>([]);
@@ -73,7 +72,7 @@ const CircuitVisualization = () => {
         <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
           <CardHeader>
             <CardTitle className="text-slate-100 flex items-center">
-              <Circuit className="mr-2 h-5 w-5 text-cyan-400" />
+              <CircuitBoard className="mr-2 h-5 w-5 text-cyan-400" />
               Quantum Gates
             </CardTitle>
             <CardDescription className="text-slate-300">

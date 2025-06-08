@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowRight, Zap, Cpu, BookOpen, PlayCircle, BarChart3, Circuit } from "lucide-react";
+import { ArrowRight, Zap, Cpu, BookOpen, PlayCircle, BarChart3, CircuitBoard } from "lucide-react";
 import QubitVisualization from "@/components/QubitVisualization";
 import GroverInterface from "@/components/GroverInterface";
 import QuantumConcepts from "@/components/QuantumConcepts";
@@ -68,7 +68,7 @@ const Index = () => {
                 Qubits
               </TabsTrigger>
               <TabsTrigger value="circuits" className="data-[state=active]:bg-cyan-600">
-                <Circuit className="mr-2 h-4 w-4" />
+                <CircuitBoard className="mr-2 h-4 w-4" />
                 Circuits
               </TabsTrigger>
               <TabsTrigger value="grover" className="data-[state=active]:bg-green-600">
