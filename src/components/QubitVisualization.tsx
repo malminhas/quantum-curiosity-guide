@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,9 +68,17 @@ const QubitVisualization = () => {
         <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
           Interactive Qubit Visualization
         </h2>
-        <p className="text-slate-300 max-w-2xl mx-auto">
-          Explore how qubits exist in superposition and understand quantum state representation
-        </p>
+        <div className="max-w-4xl mx-auto space-y-3">
+          <p className="text-slate-300 text-lg">
+            Explore how qubits exist in superposition and understand quantum state representation using the Bloch sphere
+          </p>
+          <p className="text-slate-400 text-sm">
+            The <strong className="text-purple-300">Bloch sphere</strong> is a geometric representation that visualizes all possible states of a single qubit. 
+            Unlike classical bits that are either 0 or 1, qubits can exist in <strong className="text-cyan-300">superposition</strong> - 
+            simultaneously both 0 and 1 until measured. The sphere's surface represents all pure quantum states, 
+            with the north pole as |0⟩, south pole as |1⟩, and the equator representing equal superposition states like |+⟩ and |-⟩.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -82,8 +89,13 @@ const QubitVisualization = () => {
               <Zap className="mr-2 h-5 w-5 text-purple-400" />
               Qubit State Controls
             </CardTitle>
-            <CardDescription className="text-slate-300">
-              Adjust the quantum state: |ψ⟩ = α|0⟩ + βe^(iφ)|1⟩
+            <CardDescription className="text-slate-300 space-y-2">
+              <div>Adjust the quantum state: |ψ⟩ = α|0⟩ + βe^(iφ)|1⟩</div>
+              <div className="text-xs text-slate-400 mt-2">
+                <strong className="text-purple-300">Amplitudes (α, β)</strong> determine the probability of measuring |0⟩ or |1⟩. 
+                <strong className="text-cyan-300">Phase (φ)</strong> creates interference effects crucial for quantum algorithms.
+                The amplitudes are automatically normalized so |α|² + |β|² = 1.
+              </div>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -161,8 +173,14 @@ const QubitVisualization = () => {
         <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
           <CardHeader>
             <CardTitle className="text-slate-100">Bloch Sphere</CardTitle>
-            <CardDescription className="text-slate-300">
-              3D representation of qubit state
+            <CardDescription className="text-slate-300 space-y-2">
+              <div>3D representation of qubit state showing position on the quantum sphere</div>
+              <div className="text-xs text-slate-400 mt-2">
+                The <strong className="text-purple-300">purple dot</strong> represents your qubit state. 
+                <strong className="text-cyan-300">Top/bottom</strong> = |0⟩/|1⟩ states, 
+                <strong className="text-green-300">left/right</strong> = |-⟩/|+⟩ superposition states.
+                Distance from center shows "purity" - pure states are on the surface.
+              </div>
             </CardDescription>
           </CardHeader>
           <CardContent>

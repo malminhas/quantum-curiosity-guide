@@ -1,8 +1,7 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Atom, Zap, Network, Binary, Target, Cpu } from "lucide-react";
+import { Atom, Zap, Network, Binary, Target } from "lucide-react";
 
 const QuantumConcepts = () => {
   const concepts = [
@@ -60,17 +59,6 @@ const QuantumConcepts = () => {
         "Multiple measurements give statistics"
       ],
       color: "orange"
-    },
-    {
-      icon: <Cpu className="h-8 w-8 text-pink-400" />,
-      title: "Quantum Hardware",
-      description: "Physical systems like superconducting circuits, trapped ions, or photonic systems that implement qubits.",
-      details: [
-        "IBM Quantum systems use superconducting qubits",
-        "Require extreme cooling (~0.01K)",
-        "Accessed via cloud APIs like Qiskit"
-      ],
-      color: "pink"
     }
   ];
 
@@ -79,19 +67,34 @@ const QuantumConcepts = () => {
       name: "Grover's Algorithm",
       purpose: "Database Search",
       advantage: "Quadratic speedup - √N vs N",
-      description: "Searches unsorted databases faster than classical algorithms"
+      description: "Searches unsorted databases faster than classical algorithms",
+      links: [
+        { name: "Wikipedia", url: "https://en.wikipedia.org/wiki/Grover%27s_algorithm" },
+        { name: "IBM Qiskit", url: "https://qiskit.org/textbook/ch-algorithms/grover.html" },
+        { name: "Nature Article", url: "https://www.nature.com/articles/nature02009" }
+      ]
     },
     {
       name: "Shor's Algorithm", 
       purpose: "Prime Factorization",
       advantage: "Exponential speedup",
-      description: "Could break current encryption methods"
+      description: "Could break current encryption methods by efficiently factoring large integers",
+      links: [
+        { name: "Wikipedia", url: "https://en.wikipedia.org/wiki/Shor%27s_algorithm" },
+        { name: "IBM Qiskit", url: "https://qiskit.org/textbook/ch-algorithms/shor.html" },
+        { name: "Original Paper", url: "https://arxiv.org/abs/quant-ph/9508027" }
+      ]
     },
     {
       name: "Quantum Fourier Transform",
       purpose: "Signal Processing",
       advantage: "Exponential speedup",
-      description: "Foundation for many quantum algorithms"
+      description: "Foundation for many quantum algorithms",
+      links: [
+        { name: "Wikipedia", url: "https://en.wikipedia.org/wiki/Quantum_Fourier_transform" },
+        { name: "IBM Qiskit", url: "https://qiskit.org/textbook/ch-algorithms/quantum-fourier-transform.html" },
+        { name: "MIT OpenCourseWare", url: "https://ocw.mit.edu/courses/8-370x-quantum-information-science-i-spring-2018/resources/lecture-10-quantum-fourier-transform/" }
+      ]
     }
   ];
 
@@ -135,69 +138,57 @@ const QuantumConcepts = () => {
         ))}
       </div>
 
-      <Separator className="bg-slate-700" />
-
       {/* Famous Quantum Algorithms */}
-      <div className="space-y-6">
-        <h3 className="text-2xl font-bold text-center bg-gradient-to-r from-cyan-400 to-green-400 bg-clip-text text-transparent">
-          Famous Quantum Algorithms
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {algorithms.map((algorithm, index) => (
-            <Card key={index} className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm border-slate-600">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-slate-100">{algorithm.name}</CardTitle>
-                  <Badge variant="outline" className="border-cyan-400/50 text-cyan-300">
-                    {algorithm.purpose}
-                  </Badge>
-                </div>
-                <CardDescription className="text-slate-300">
-                  {algorithm.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center space-x-2">
-                  <Zap className="h-4 w-4 text-yellow-400" />
-                  <span className="text-sm font-medium text-yellow-300">{algorithm.advantage}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Qiskit Integration Info */}
-      <Card className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 backdrop-blur-sm border-blue-600/50">
+      <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
         <CardHeader>
-          <CardTitle className="text-slate-100 flex items-center">
-            <Cpu className="mr-3 h-6 w-6 text-blue-400" />
-            Interfacing with Quantum Hardware
-          </CardTitle>
-          <CardDescription className="text-slate-200">
-            Modern quantum computing platforms like IBM's Qiskit provide cloud access to real quantum processors
+          <CardTitle className="text-slate-100">Famous Quantum Algorithms</CardTitle>
+          <CardDescription className="text-slate-300">
+            Quantum algorithms that provide computational advantages over classical methods
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <h4 className="font-semibold text-blue-300">IBM Qiskit Features:</h4>
-              <ul className="text-sm text-slate-300 space-y-1">
-                <li>• Cloud access to quantum processors</li>
-                <li>• Quantum circuit composer</li>
-                <li>• Noise simulation and error mitigation</li>
-                <li>• Real-time queue monitoring</li>
-              </ul>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold text-purple-300">Hardware Types:</h4>
-              <ul className="text-sm text-slate-300 space-y-1">
-                <li>• Superconducting qubits (IBM, Google)</li>
-                <li>• Trapped ions (IonQ, Honeywell)</li>
-                <li>• Photonic systems (Xanadu)</li>
-                <li>• Neutral atoms (QuEra)</li>
-              </ul>
-            </div>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {algorithms.map((algorithm, index) => (
+              <Card key={index} className="bg-slate-900/50 border-slate-600">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-slate-100">{algorithm.name}</CardTitle>
+                    <Badge variant="outline" className="border-cyan-400/50 text-cyan-300">
+                      {algorithm.purpose}
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-slate-300">
+                    {algorithm.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Zap className="h-4 w-4 text-yellow-400" />
+                    <span className="text-sm font-medium text-yellow-300">{algorithm.advantage}</span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-slate-300">Learn More:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {algorithm.links.map((link, linkIndex) => (
+                        <a
+                          key={linkIndex}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 hover:text-cyan-300 transition-colors duration-200 border border-slate-600/50 hover:border-cyan-400/50"
+                        >
+                          {link.name}
+                          <svg className="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </CardContent>
       </Card>

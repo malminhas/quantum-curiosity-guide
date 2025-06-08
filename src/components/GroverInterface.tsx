@@ -8,8 +8,28 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Target, BarChart3, Clock, Zap, AlertCircle, CheckCircle } from "lucide-react";
+import { 
+  Search, 
+  Target, 
+  BarChart3, 
+  Zap, 
+  AlertCircle, 
+  CheckCircle, 
+  Activity,
+  Info 
+} from "lucide-react";
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
+} from "recharts";
 
 interface GroverResult {
   target_state: string;
@@ -42,21 +62,38 @@ interface AnalysisResult {
   };
 }
 
+interface IterationStep {
+  step_name: string;
+  iteration_number: number;
+  probabilities: Record<string, number>;
+  target_probability: number;
+}
+
+interface IterationResult {
+  target_state: string;
+  num_qubits: number;
+  optimal_iterations: number;
+  search_space_size: number;
+  steps: IterationStep[];
+  final_amplification: number;
+}
+
 const GroverInterface = () => {
   const [targetState, setTargetState] = useState("101");
   const [shots, setShots] = useState(1000);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<GroverResult | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [iterations, setIterations] = useState<IterationResult | null>(null);
   const { toast } = useToast();
 
-  const API_BASE = "http://localhost:8086";
+  const API_BASE = "http://localhost:8087";
 
   const validateTargetState = (state: string): boolean => {
     return /^[01]{1,3}$/.test(state);
   };
 
-  const runGroverSearch = async () => {
+  const runCompleteSearch = async () => {
     if (!validateTargetState(targetState)) {
       toast({
         title: "Invalid Target State",
@@ -76,8 +113,11 @@ const GroverInterface = () => {
     }
 
     setIsLoading(true);
+    
     try {
-      const response = await fetch(`${API_BASE}/grover/search`, {
+      // Step 1: Run the actual Grover search
+      console.log(`🚀 API Call: POST ${API_BASE}/grover/search`, { target_state: targetState, shots: shots });
+      const searchResponse = await fetch(`${API_BASE}/grover/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -89,54 +129,45 @@ const GroverInterface = () => {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!searchResponse.ok) {
+        throw new Error(`Search failed: ${searchResponse.status}`);
       }
 
-      const data: GroverResult = await response.json();
-      setResult(data);
+      const searchData: GroverResult = await searchResponse.json();
+      console.log(`✅ Search completed:`, searchData);
+      setResult(searchData);
+
+      // Step 2: Get performance analysis
+      console.log(`🚀 API Call: GET ${API_BASE}/grover/analyze/${targetState}`);
+      const analysisResponse = await fetch(`${API_BASE}/grover/analyze/${targetState}`);
+      if (analysisResponse.ok) {
+        const analysisData: AnalysisResult = await analysisResponse.json();
+        console.log(`✅ Analysis completed:`, analysisData);
+        setAnalysis(analysisData);
+      }
+
+      // Step 3: Get iteration details
+      console.log(`🚀 API Call: GET ${API_BASE}/grover/iterations/${targetState}`);
+      const iterationsResponse = await fetch(`${API_BASE}/grover/iterations/${targetState}`);
+      if (iterationsResponse.ok) {
+        const iterationsData: IterationResult = await iterationsResponse.json();
+        console.log(`✅ Iterations completed:`, iterationsData);
+        setIterations(iterationsData);
+      }
       
       toast({
-        title: "Grover Search Completed",
-        description: `Found target state with ${data.success_rate.toFixed(1)}% success rate`,
+        title: "Complete Analysis Finished",
+        description: `Search completed with ${searchData.success_rate.toFixed(1)}% success rate. All panels loaded.`,
       });
-    } catch (error) {
-      console.error("Grover search failed:", error);
+    } catch (error: any) {
+      console.error("Complete search failed:", error);
       toast({
         title: "Search Failed",
-        description: "Could not connect to quantum backend. Please ensure the API is running on port 8086.",
+        description: "Could not connect to quantum backend. Please ensure the API is running on port 8087.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const analyzeTargetState = async () => {
-    if (!validateTargetState(targetState)) {
-      toast({
-        title: "Invalid Target State",
-        description: "Please enter a binary string with 1-3 qubits",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE}/grover/analyze/${targetState}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: AnalysisResult = await response.json();
-      setAnalysis(data);
-    } catch (error) {
-      console.error("Analysis failed:", error);
-      toast({
-        title: "Analysis Failed",
-        description: "Could not analyze target state. Please check the API connection.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -153,7 +184,7 @@ const GroverInterface = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Search Interface */}
         <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
           <CardHeader>
@@ -200,49 +231,114 @@ const GroverInterface = () => {
               <div className="space-y-2">
                 <Label className="text-slate-300">Quick Examples</Label>
                 <div className="flex flex-wrap gap-2">
-                  {exampleStates.map((state) => (
-                    <Button
-                      key={state}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setTargetState(state)}
-                      className="border-blue-400/50 text-blue-200 hover:bg-blue-600/20"
-                    >
-                      {state}
-                    </Button>
-                  ))}
+                  {exampleStates.map((state) => {
+                    const isSelected = state === targetState;
+                    return (
+                      <Button
+                        key={state}
+                        variant={isSelected ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setTargetState(state)}
+                        className={
+                          isSelected
+                            ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-500"
+                            : "border-blue-400/50 text-blue-200 hover:bg-blue-600/20"
+                        }
+                      >
+                        {state}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
             <Separator className="bg-slate-600" />
 
-            <div className="flex space-x-3">
-              <Button
-                onClick={runGroverSearch}
-                disabled={isLoading}
-                className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
-              >
-                {isLoading ? (
-                  <>
-                    <Zap className="mr-2 h-4 w-4 animate-spin" />
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <Search className="mr-2 h-4 w-4" />
-                    Run Search
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={analyzeTargetState}
-                className="border-purple-400/50 text-purple-200 hover:bg-purple-600/20"
-              >
-                <BarChart3 className="mr-2 h-4 w-4" />
-                Analyze
-              </Button>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Button
+                  onClick={runCompleteSearch}
+                  disabled={isLoading}
+                  className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                >
+                  {isLoading ? (
+                    <>
+                      <Zap className="mr-2 h-4 w-4 animate-spin" />
+                      Searching...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="mr-2 h-4 w-4" />
+                      Run Complete Search
+                    </>
+                  )}
+                </Button>
+                
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="border-slate-600 text-slate-300 hover:bg-slate-600/20"
+                    >
+                      <Info className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-slate-800 border-slate-600">
+                    <DialogHeader>
+                      <DialogTitle className="text-slate-100 flex items-center">
+                        <Info className="mr-2 h-5 w-5 text-cyan-400" />
+                        About Complete Search
+                      </DialogTitle>
+                      <DialogDescription className="text-slate-300">
+                        What happens when you run the complete search
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 text-slate-200">
+                      <p>
+                        <strong className="text-cyan-400">Complete Search</strong> executes Grover's quantum search algorithm 
+                        and automatically displays all analysis panels:
+                      </p>
+                      <div className="space-y-3">
+                        <div className="flex items-start space-x-3">
+                          <Target className="h-5 w-5 text-purple-400 mt-0.5" />
+                          <div>
+                            <strong className="text-purple-300">Performance Analysis</strong>
+                            <p className="text-sm text-slate-400">
+                              Shows theoretical speedup compared to classical search algorithms
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <Activity className="h-5 w-5 text-orange-400 mt-0.5" />
+                          <div>
+                            <strong className="text-orange-300">Algorithm Evolution</strong>
+                            <p className="text-sm text-slate-400">
+                              Interactive chart showing step-by-step probability amplification
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <BarChart3 className="h-5 w-5 text-green-400 mt-0.5" />
+                          <div>
+                            <strong className="text-green-300">Search Results</strong>
+                            <p className="text-sm text-slate-400">
+                              Actual quantum measurement results from the quantum simulator
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <Alert className="border-cyan-400/50 bg-cyan-600/10">
+                        <AlertCircle className="h-4 w-4 text-cyan-400" />
+                        <AlertDescription className="text-cyan-200">
+                          All API calls are logged to the browser console for debugging and transparency.
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -322,9 +418,106 @@ const GroverInterface = () => {
           </Card>
         )}
 
+        {/* Iteration Evolution Chart */}
+        {iterations && (
+          <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-slate-100 flex items-center">
+                <Activity className="mr-2 h-5 w-5 text-orange-400" />
+                Algorithm Evolution
+              </CardTitle>
+              <CardDescription className="text-slate-300">
+                Probability evolution through Grover iterations for {iterations.target_state}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="text-sm text-slate-400">Amplification</div>
+                  <div className="text-lg font-semibold text-orange-400">
+                    {iterations.final_amplification}x
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-sm text-slate-400">Total Steps</div>
+                  <div className="text-lg font-semibold text-slate-200">
+                    {iterations.steps.length}
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="bg-slate-600" />
+
+              {/* Chart Visualization */}
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={iterations.steps.map((step, index) => ({
+                      step: index,
+                      stepName: step.step_name.replace(/^(Oracle|Diffusion|Initial): /, ''),
+                      probability: step.target_probability * 100,
+                      iteration: step.iteration_number,
+                    }))}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis 
+                      dataKey="step" 
+                      stroke="#9CA3AF"
+                      fontSize={12}
+                      tickFormatter={(value) => `${value}`}
+                    />
+                    <YAxis 
+                      stroke="#9CA3AF"
+                      fontSize={12}
+                      domain={[0, 100]}
+                      tickFormatter={(value) => `${value}%`}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: '#1F2937',
+                        border: '1px solid #374151',
+                        borderRadius: '6px',
+                        color: '#F3F4F6'
+                      }}
+                      formatter={(value: number, name: string) => [
+                        `${value.toFixed(1)}%`,
+                        'Target Probability'
+                      ]}
+                      labelFormatter={(label: number) => {
+                        const step = iterations.steps[label];
+                        return `${step?.step_name || 'Step'} (Iteration ${step?.iteration_number || 0})`;
+                      }}
+                    />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="probability" 
+                      stroke="#FB923C" 
+                      strokeWidth={3}
+                      dot={{ fill: '#FB923C', strokeWidth: 2, r: 6 }}
+                      activeDot={{ r: 8, stroke: '#FB923C', strokeWidth: 2 }}
+                      name="Target Probability"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              <Alert className="border-orange-400/50 bg-orange-600/10">
+                <Activity className="h-4 w-4 text-orange-400" />
+                <AlertDescription className="text-orange-200">
+                  Final target probability increased from {(100 / iterations.search_space_size).toFixed(1)}% to {(iterations.steps[iterations.steps.length - 1].target_probability * 100).toFixed(1)}%
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        )}
+
+
+
         {/* Search Results */}
         {result && (
-          <Card className="lg:col-span-2 bg-slate-800/50 backdrop-blur-sm border-slate-700">
+          <Card className="lg:col-span-3 bg-slate-800/50 backdrop-blur-sm border-slate-700">
             <CardHeader>
               <CardTitle className="text-slate-100 flex items-center">
                 <BarChart3 className="mr-2 h-5 w-5 text-green-400" />

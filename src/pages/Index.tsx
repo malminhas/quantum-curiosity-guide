@@ -10,6 +10,7 @@ import QubitVisualization from "@/components/QubitVisualization";
 import GroverInterface from "@/components/GroverInterface";
 import QuantumConcepts from "@/components/QuantumConcepts";
 import CircuitVisualization from "@/components/CircuitVisualization";
+import HardwareInterface from "@/components/HardwareInterface";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("concepts");
@@ -41,9 +42,13 @@ const Index = () => {
                 Learn Concepts
               </Button>
               <Button 
-                variant="outline" 
+                variant={activeTab === "grover" ? "default" : "outline"}
                 size="lg"
-                className="border-purple-400/50 text-purple-200 hover:bg-purple-600/20"
+                className={
+                  activeTab === "grover"
+                    ? "bg-green-600 hover:bg-green-700 text-white border-green-500"
+                    : "border-purple-400/50 text-purple-200 hover:bg-purple-600/20"
+                }
                 onClick={() => setActiveTab("grover")}
               >
                 <PlayCircle className="mr-2 h-5 w-5" />
@@ -58,7 +63,7 @@ const Index = () => {
       <div className="container mx-auto px-4 py-12">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex justify-center mb-8">
-            <TabsList className="grid grid-cols-4 w-full max-w-2xl bg-slate-800/50 backdrop-blur-sm">
+            <TabsList className="grid grid-cols-5 w-full max-w-3xl bg-slate-800/50 backdrop-blur-sm">
               <TabsTrigger value="concepts" className="data-[state=active]:bg-blue-600">
                 <BookOpen className="mr-2 h-4 w-4" />
                 Concepts
@@ -70,6 +75,10 @@ const Index = () => {
               <TabsTrigger value="circuits" className="data-[state=active]:bg-cyan-600">
                 <CircuitBoard className="mr-2 h-4 w-4" />
                 Circuits
+              </TabsTrigger>
+              <TabsTrigger value="hardware" className="data-[state=active]:bg-orange-600">
+                <Zap className="mr-2 h-4 w-4" />
+                Hardware
               </TabsTrigger>
               <TabsTrigger value="grover" className="data-[state=active]:bg-green-600">
                 <BarChart3 className="mr-2 h-4 w-4" />
@@ -88,6 +97,10 @@ const Index = () => {
 
           <TabsContent value="circuits" className="space-y-6">
             <CircuitVisualization />
+          </TabsContent>
+
+          <TabsContent value="hardware" className="space-y-6">
+            <HardwareInterface />
           </TabsContent>
 
           <TabsContent value="grover" className="space-y-6">
