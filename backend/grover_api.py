@@ -14,6 +14,7 @@ from qiskit import QuantumCircuit, transpile # type: ignore
 from qiskit.circuit.library import grover_operator # type: ignore
 from qiskit_aer import AerSimulator # type: ignore
 from qiskit.quantum_info import Statevector # type: ignore
+from qiskit_ibm_runtime import QiskitRuntimeService # type: ignore
 
 def setup_logging() -> logging.Logger:
     """
@@ -54,6 +55,12 @@ def setup_logging() -> logging.Logger:
 # Initialize logging
 logger = setup_logging()
 
+# CORS Configuration - Configurable via environment variables (like invoice generator)
+CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:8086,http://127.0.0.1:8086,http://localhost:3000,http://localhost:5173').split(',')
+CORS_ALLOW_CREDENTIALS = os.environ.get('CORS_ALLOW_CREDENTIALS', 'True').lower() in ('true', '1', 't')
+CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+CORS_ALLOW_HEADERS = ["*"]
+
 app = FastAPI(
     title="Grover's Algorithm API 🔍⚡",
     description="""
@@ -90,20 +97,16 @@ app = FastAPI(
         "url": "https://opensource.org/licenses/MIT",
     },
     terms_of_service="https://example.com/terms/",
+    root_path=os.environ.get('ROOT_PATH', '')
 )
 
-# Configure CORS to allow frontend requests
+# Add CORS middleware with configurable origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8086",  # Frontend development server
-        "http://127.0.0.1:8086",  # Alternative localhost
-        "http://localhost:3000",  # Common React dev port (backup)
-        "http://localhost:5173",  # Common Vite dev port (backup)
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=CORS_ALLOW_CREDENTIALS,
+    allow_methods=CORS_ALLOW_METHODS,
+    allow_headers=CORS_ALLOW_HEADERS,
 )
 
 # Initialize simulator
@@ -1013,27 +1016,18 @@ async def connect_to_ibm_quantum(request: IBMConnectionRequest) -> IBMHardwareIn
     logger.info("Attempting to connect to IBM Quantum with instance: %s", request.instance)
     
     try:
-        # Import IBM Quantum Runtime
-        from qiskit_ibm_runtime import QiskitRuntimeService # type: ignore
-        
-        # Check for test mode
-        if request.api_key == "test":
-            logger.info("Using test mode - returning mock hardware data")
-            # Return mock hardware data for testing
-            hardware_info = IBMHardwareInfo(
-                backend_name="ibm_brisbane",
-                backend_version="2.1.7",
-                num_qubits=127,
-                operational=True,
-                pending_jobs=24,
-                basis_gates=['cx', 'id', 'rz', 'sx', 'x'],
-                coupling_map=[[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]]
-            )
-            return hardware_info
-        
         # Step 2: Connect and run on IBM Quantum (following user's pattern)
         logger.info("🔌 Connecting to IBM Quantum service...")
+        
+        # Save account credentials first (like in the notebook)
+        logger.info("Saving account with instance: %s", request.instance)
+        QiskitRuntimeService.save_account(token=request.api_key, instance=request.instance, overwrite=True)
+        logger.info("Account saved successfully")
+        
+        # Now use the simple approach that works locally
+        logger.info("Creating service with instance: %s", request.instance)
         service = QiskitRuntimeService(instance=request.instance)
+        logger.info("Service created successfully")
         backend = service.least_busy(operational=True, simulator=False, min_num_qubits=2)
         
         logger.info(f"✅ Connected to: {backend.name}")
@@ -1056,40 +1050,13 @@ async def connect_to_ibm_quantum(request: IBMConnectionRequest) -> IBMHardwareIn
         return hardware_info
         
     except ImportError:
-        logger.error("IBM Quantum Runtime not available - using test mode")
-        # Fallback to test mode if package not available
-        hardware_info = IBMHardwareInfo(
-            backend_name="ibm_brisbane",
-            backend_version="2.1.7",
-            num_qubits=127,
-            operational=True,
-            pending_jobs=24,
-            basis_gates=['cx', 'id', 'rz', 'sx', 'x'],
-            coupling_map=[[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]]
+        logger.error("IBM Quantum Runtime not available")
+        raise HTTPException(
+            status_code=500,
+            detail="IBM Quantum Runtime package not installed"
         )
-        return hardware_info
     except Exception as e:
         logger.error("Failed to connect to IBM Quantum: %s", str(e))
-        
-        # If connection fails, check if it's a configuration issue and provide test mode
-        error_msg = str(e).lower()
-        if any(keyword in error_msg for keyword in [
-            "token", "authentication", "channel", "instance", "not valid", 
-            "credentials", "permission", "access", "unauthorized"
-        ]):
-            logger.info("Connection failed due to authentication/configuration - using test mode")
-            hardware_info = IBMHardwareInfo(
-                backend_name="ibm_brisbane",
-                backend_version="2.1.7",
-                num_qubits=127,
-                operational=True,
-                pending_jobs=24,
-                basis_gates=['cx', 'id', 'rz', 'sx', 'x'],
-                coupling_map=[[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]]
-            )
-            return hardware_info
-        
-        # For other errors, still return the original error
         raise HTTPException(
             status_code=400, 
             detail=f"IBM Quantum connection failed: {str(e)}"
@@ -1116,6 +1083,11 @@ async def run_grover_on_ibm_hardware(request: IBMGroverRequest) -> IBMJobResult:
         
         # Step 2: Connect and run on IBM Quantum (following user's pattern)
         logger.info("🔌 Connecting to IBM Quantum service...")
+        
+        # Save account credentials first (like in the notebook)
+        QiskitRuntimeService.save_account(token=request.api_key, instance=request.instance, overwrite=True)
+        
+        # Now use the simple approach that works locally
         service = QiskitRuntimeService(instance=request.instance)
         backend = service.least_busy(operational=True, simulator=False, min_num_qubits=2)
         
@@ -1252,7 +1224,8 @@ async def get_ibm_job_status(
         from collections import Counter
         
         # Initialize service (following user's pattern)
-        service = QiskitRuntimeService(instance=instance)
+        service = QiskitRuntimeService(token=api_key, instance=instance, channel="ibm_quantum") 
+        backend = service.least_busy(operational=True, simulator=False, min_num_qubits=2)
         
         # Get job
         job = service.job(job_id)

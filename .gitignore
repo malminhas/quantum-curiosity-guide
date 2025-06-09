@@ -25,3 +25,4 @@ dist-ssr
 
 local.env
 __pycache__
+terraform

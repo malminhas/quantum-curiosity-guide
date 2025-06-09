@@ -87,7 +87,7 @@ const GroverInterface = () => {
   const [iterations, setIterations] = useState<IterationResult | null>(null);
   const { toast } = useToast();
 
-  const API_BASE = "http://localhost:8087";
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8087";
 
   const validateTargetState = (state: string): boolean => {
     return /^[01]{1,3}$/.test(state);
