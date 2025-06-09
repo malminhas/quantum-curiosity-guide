@@ -16,80 +16,6 @@ This full-stack quantum computing application demonstrates Grover's algorithm - 
 - 📊 **Real-time Analytics**: Performance metrics and algorithm visualization
 - 🧪 **Educational Content**: Step-by-step quantum algorithm explanations
 
-## 🏗️ System Architecture
-
-<function_calls>
-<invoke name="create_diagram">
-<parameter name="content">graph TB
-    subgraph "Client Environment"
-        Browser["🌐 Web Browser"]
-    end
-    
-    subgraph "Application Infrastructure"
-        subgraph "Frontend Container"
-            React["⚛️ React + Vite<br/>TypeScript"]
-            Nginx["🔧 Nginx<br/>Static Server"]
-            React --> Nginx
-        end
-        
-        subgraph "Backend Container"
-            FastAPI["🚀 FastAPI<br/>Python 3.9+"]
-            Qiskit["🔬 Qiskit<br/>Quantum Framework"]
-            FastAPI --> Qiskit
-        end
-        
-        subgraph "Container Network"
-            Network["🔗 Docker Bridge<br/>quantum-network"]
-        end
-        
-        React -.-> FastAPI
-        FastAPI -.-> Network
-        Nginx -.-> Network
-    end
-    
-    subgraph "IBM Quantum Cloud"
-        IBMQ["☁️ IBM Quantum<br/>Runtime Service"]
-        Hardware["🖥️ Quantum Hardware<br/>QPUs"]
-        Simulator["💻 Cloud Simulators<br/>Aer Backend"]
-        
-        IBMQ --> Hardware
-        IBMQ --> Simulator
-    end
-    
-    subgraph "Deployment Infrastructure"
-        Terraform["🏗️ Terraform<br/>Infrastructure as Code"]
-        Docker["🐳 Docker<br/>Container Runtime"]
-        
-        subgraph "Environment Options"
-            Local["🏠 Local Development<br/>localhost:8086/8087"]
-            Remote["🌍 Remote Deployment<br/>Digital Ocean + Caddy"]
-        end
-        
-        Terraform --> Docker
-        Terraform --> Local
-        Terraform --> Remote
-    end
-    
-    Browser --> Nginx
-    FastAPI -->|API Key + Instance| IBMQ
-    Terraform -.->|Manages| React
-    Terraform -.->|Manages| FastAPI
-    
-    classDef frontend fill:#61dafb,stroke:#333,stroke-width:2px,color:#000
-    classDef backend fill:#009639,stroke:#333,stroke-width:2px,color:#fff
-    classDef quantum fill:#6f42c1,stroke:#333,stroke-width:2px,color:#fff
-    classDef infrastructure fill:#ff6b35,stroke:#333,stroke-width:2px,color:#fff
-    classDef environment fill:#28a745,stroke:#333,stroke-width:2px,color:#fff
-    
-    class React,Nginx frontend
-    class FastAPI,Qiskit backend
-    class IBMQ,Hardware,Simulator quantum
-    class Terraform,Docker infrastructure
-    class Local,Remote environment
-</code_block_to_apply_changes_from>
-</invoke>
-</function_calls>
-
 ## 🎯 Grover's Algorithm: The Quantum Advantage
 
 ### The Problem
@@ -242,6 +168,75 @@ Where N is the size of the search space (2^num_qubits).
 After optimal iterations, measuring the quantum system yields the target state with high probability (typically >95%).
 
 ## 🏗️ System Architecture
+
+```mermaid
+graph TB
+    subgraph "Client Environment"
+        Browser["🌐 Web Browser"]
+    end
+    
+    subgraph "Application Infrastructure"
+        subgraph "Frontend Container"
+            React["⚛️ React + Vite<br/>TypeScript"]
+            Nginx["🔧 Nginx<br/>Static Server"]
+            React --> Nginx
+        end
+        
+        subgraph "Backend Container"
+            FastAPI["🚀 FastAPI<br/>Python 3.9+"]
+            Qiskit["🔬 Qiskit<br/>Quantum Framework"]
+            FastAPI --> Qiskit
+        end
+        
+        subgraph "Container Network"
+            Network["🔗 Docker Bridge<br/>quantum-network"]
+        end
+        
+        React -.-> FastAPI
+        FastAPI -.-> Network
+        Nginx -.-> Network
+    end
+    
+    subgraph "IBM Quantum Cloud"
+        IBMQ["☁️ IBM Quantum<br/>Runtime Service"]
+        Hardware["🖥️ Quantum Hardware<br/>QPUs"]
+        Simulator["💻 Cloud Simulators<br/>Aer Backend"]
+        
+        IBMQ --> Hardware
+        IBMQ --> Simulator
+    end
+    
+    subgraph "Deployment Infrastructure"
+        Terraform["🏗️ Terraform<br/>Infrastructure as Code"]
+        Docker["🐳 Docker<br/>Container Runtime"]
+        
+        subgraph "Environment Options"
+            Local["🏠 Local Development<br/>localhost:8086/8087"]
+            Remote["🌍 Remote Deployment<br/>Digital Ocean + Caddy"]
+        end
+        
+        Terraform --> Docker
+        Terraform --> Local
+        Terraform --> Remote
+    end
+    
+    Browser --> Nginx
+    FastAPI -->|API Key + Instance| IBMQ
+    Terraform -.->|Manages| React
+    Terraform -.->|Manages| FastAPI
+    
+    classDef frontend fill:#61dafb,stroke:#333,stroke-width:2px,color:#000
+    classDef backend fill:#009639,stroke:#333,stroke-width:2px,color:#fff
+    classDef quantum fill:#6f42c1,stroke:#333,stroke-width:2px,color:#fff
+    classDef infrastructure fill:#ff6b35,stroke:#333,stroke-width:2px,color:#fff
+    classDef environment fill:#28a745,stroke:#333,stroke-width:2px,color:#fff
+    
+    class React,Nginx frontend
+    class FastAPI,Qiskit backend
+    class IBMQ,Hardware,Simulator quantum
+    class Terraform,Docker infrastructure
+    class Local,Remote environment
+```
 
 The system architecture demonstrates the complete quantum computing application stack:
 
