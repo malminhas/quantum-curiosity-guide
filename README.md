@@ -1,18 +1,94 @@
-# Quantum Computing: Grover's Algorithm Implementation 🔍⚡
+# Quantum Curiosity Guide: Interactive Grover's Algorithm Implementation 🔍⚡
 
-A comprehensive implementation of Grover's quantum search algorithm featuring a FastAPI web service, interactive Jupyter notebook, and extensive testing suite. This project demonstrates practical quantum computing with quadratic speedup for unstructured search problems.
+A comprehensive quantum computing application featuring a modern React frontend, FastAPI backend, and IBM Quantum hardware integration. Experience Grover's quantum search algorithm with **quadratic speedup** through an intuitive web interface and deploy seamlessly with Docker and Terraform.
 
 ## 🌟 Overview
 
-Grover's algorithm solves the fundamental problem of searching through unsorted databases with **quadratic speedup** compared to classical methods. While classical computers need O(N) operations to search N items, Grover's algorithm achieves the same result in O(√N) operations using quantum superposition and interference.
+This full-stack quantum computing application demonstrates Grover's algorithm - a quantum search algorithm that provides **quadratic speedup** over classical search methods. While classical computers need O(N) operations to search N items, Grover's algorithm achieves the same result in O(√N) operations using quantum superposition and interference.
 
-### Key Features
-- 🚀 **FastAPI Web Service**: RESTful API for quantum search operations
-- 📓 **Interactive Jupyter Notebook**: Educational content with step-by-step examples
-- 🧪 **Comprehensive Testing**: Unit, integration, and performance tests
-- 🎯 **1-3 Qubit Support**: Search spaces from 2 to 8 quantum states
-- ⚡ **Quantum Simulation**: Fast execution on classical simulators
-- 📊 **Performance Analysis**: Real-time metrics and complexity comparisons
+### 🎯 Key Features
+
+- 🖥️ **Modern React Frontend**: Interactive web interface with real-time quantum results
+- 🚀 **FastAPI Backend**: High-performance API with comprehensive quantum operations
+- 🔌 **IBM Quantum Integration**: Connect to real quantum hardware and simulators
+- 🐳 **Docker Deployment**: Containerized application with nginx and Python services
+- 🏗️ **Terraform Infrastructure**: Automated deployment to local and remote environments
+- 📊 **Real-time Analytics**: Performance metrics and algorithm visualization
+- 🧪 **Educational Content**: Step-by-step quantum algorithm explanations
+
+## 🏗️ System Architecture
+
+<function_calls>
+<invoke name="create_diagram">
+<parameter name="content">graph TB
+    subgraph "Client Environment"
+        Browser["🌐 Web Browser"]
+    end
+    
+    subgraph "Application Infrastructure"
+        subgraph "Frontend Container"
+            React["⚛️ React + Vite<br/>TypeScript"]
+            Nginx["🔧 Nginx<br/>Static Server"]
+            React --> Nginx
+        end
+        
+        subgraph "Backend Container"
+            FastAPI["🚀 FastAPI<br/>Python 3.9+"]
+            Qiskit["🔬 Qiskit<br/>Quantum Framework"]
+            FastAPI --> Qiskit
+        end
+        
+        subgraph "Container Network"
+            Network["🔗 Docker Bridge<br/>quantum-network"]
+        end
+        
+        React -.-> FastAPI
+        FastAPI -.-> Network
+        Nginx -.-> Network
+    end
+    
+    subgraph "IBM Quantum Cloud"
+        IBMQ["☁️ IBM Quantum<br/>Runtime Service"]
+        Hardware["🖥️ Quantum Hardware<br/>QPUs"]
+        Simulator["💻 Cloud Simulators<br/>Aer Backend"]
+        
+        IBMQ --> Hardware
+        IBMQ --> Simulator
+    end
+    
+    subgraph "Deployment Infrastructure"
+        Terraform["🏗️ Terraform<br/>Infrastructure as Code"]
+        Docker["🐳 Docker<br/>Container Runtime"]
+        
+        subgraph "Environment Options"
+            Local["🏠 Local Development<br/>localhost:8086/8087"]
+            Remote["🌍 Remote Deployment<br/>Digital Ocean + Caddy"]
+        end
+        
+        Terraform --> Docker
+        Terraform --> Local
+        Terraform --> Remote
+    end
+    
+    Browser --> Nginx
+    FastAPI -->|API Key + Instance| IBMQ
+    Terraform -.->|Manages| React
+    Terraform -.->|Manages| FastAPI
+    
+    classDef frontend fill:#61dafb,stroke:#333,stroke-width:2px,color:#000
+    classDef backend fill:#009639,stroke:#333,stroke-width:2px,color:#fff
+    classDef quantum fill:#6f42c1,stroke:#333,stroke-width:2px,color:#fff
+    classDef infrastructure fill:#ff6b35,stroke:#333,stroke-width:2px,color:#fff
+    classDef environment fill:#28a745,stroke:#333,stroke-width:2px,color:#fff
+    
+    class React,Nginx frontend
+    class FastAPI,Qiskit backend
+    class IBMQ,Hardware,Simulator quantum
+    class Terraform,Docker infrastructure
+    class Local,Remote environment
+</code_block_to_apply_changes_from>
+</invoke>
+</function_calls>
 
 ## 🎯 Grover's Algorithm: The Quantum Advantage
 
@@ -164,6 +240,25 @@ Where N is the size of the search space (2^num_qubits).
 
 ### 4. Measurement
 After optimal iterations, measuring the quantum system yields the target state with high probability (typically >95%).
+
+## 🏗️ System Architecture
+
+The system architecture demonstrates the complete quantum computing application stack:
+
+### Application Flow
+1. **User Interface**: Modern React frontend with TypeScript and Tailwind CSS
+2. **API Communication**: RESTful API calls from frontend to FastAPI backend
+3. **Quantum Processing**: Qiskit framework handles quantum circuit creation and execution
+4. **IBM Integration**: Direct connection to IBM Quantum cloud services with API key authentication
+5. **Containerization**: Docker containers ensure consistent deployment across environments
+6. **Infrastructure**: Terraform manages the complete deployment lifecycle
+
+### Key Architectural Benefits
+- **Scalability**: Container-based architecture allows horizontal scaling
+- **Flexibility**: Support for both local development and remote production deployment
+- **Security**: Isolated container network with controlled external access
+- **Maintainability**: Clear separation between frontend, backend, and infrastructure concerns
+- **Educational**: Full-stack implementation demonstrates real-world quantum application development
 
 ## 📡 API Reference
 
