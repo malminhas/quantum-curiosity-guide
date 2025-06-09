@@ -70,8 +70,8 @@ const QuantumConcepts = () => {
       description: "Searches unsorted databases faster than classical algorithms",
       links: [
         { name: "Wikipedia", url: "https://en.wikipedia.org/wiki/Grover%27s_algorithm" },
-        { name: "IBM Qiskit", url: "https://qiskit.org/textbook/ch-algorithms/grover.html" },
-        { name: "Nature Article", url: "https://www.nature.com/articles/nature02009" }
+        { name: "IBM Qiskit", url: "https://github.com/Qiskit/textbook/blob/main/notebooks/ch-algorithms/grover.ipynb" },
+        { name: "Original Paper", url: "https://arxiv.org/abs/quant-ph/9605043" }
       ]
     },
     {
@@ -81,7 +81,7 @@ const QuantumConcepts = () => {
       description: "Could break current encryption methods by efficiently factoring large integers",
       links: [
         { name: "Wikipedia", url: "https://en.wikipedia.org/wiki/Shor%27s_algorithm" },
-        { name: "IBM Qiskit", url: "https://qiskit.org/textbook/ch-algorithms/shor.html" },
+        { name: "IBM Qiskit", url: "https://github.com/Qiskit/textbook/blob/main/notebooks/ch-algorithms/shor.ipynb" },
         { name: "Original Paper", url: "https://arxiv.org/abs/quant-ph/9508027" }
       ]
     },
@@ -92,8 +92,8 @@ const QuantumConcepts = () => {
       description: "Foundation for many quantum algorithms",
       links: [
         { name: "Wikipedia", url: "https://en.wikipedia.org/wiki/Quantum_Fourier_transform" },
-        { name: "IBM Qiskit", url: "https://qiskit.org/textbook/ch-algorithms/quantum-fourier-transform.html" },
-        { name: "MIT OpenCourseWare", url: "https://ocw.mit.edu/courses/8-370x-quantum-information-science-i-spring-2018/resources/lecture-10-quantum-fourier-transform/" }
+        { name: "IBM Qiskit", url: "https://github.com/Qiskit/textbook/blob/main/notebooks/ch-algorithms/quantum-fourier-transform.ipynb" },
+        { name: "Original Paper", url: "https://arxiv.org/abs/2003.03011" }
       ]
     }
   ];
