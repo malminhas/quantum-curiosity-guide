@@ -178,11 +178,14 @@ After optimal iterations, measuring the quantum system yields the target state w
 **Execute Grover's Quantum Search** - Run the complete Grover algorithm.
 
 **Request Body:**
+* `target_state`: Binary string (1-3 qubits): "0", "1", "00"-"11", "000"-"111"
+* `shots`: Number of measurements (100-10,000)
+* `backend`: Quantum backend.  Can be "simulator" or real Quantum hardware.
 ```json
 {
-  "target_state": "101",     // Binary string (1-3 qubits): "0", "1", "00"-"11", "000"-"111"
-  "shots": 1000,             // Number of measurements (100-10,000)
-  "backend": "simulator"     // Quantum backend (currently "simulator" only)
+  "target_state": "101",
+  "shots": 1000,
+  "backend": "simulator"
 }
 ```
 
