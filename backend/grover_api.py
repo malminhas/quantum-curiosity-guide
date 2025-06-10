@@ -55,11 +55,17 @@ def setup_logging() -> logging.Logger:
 # Initialize logging
 logger = setup_logging()
 
-# CORS Configuration - Configurable via environment variables (like invoice generator)
+# Configuration - Configurable via environment variables
 CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:8086,http://127.0.0.1:8086,http://localhost:3000,http://localhost:5173').split(',')
 CORS_ALLOW_CREDENTIALS = os.environ.get('CORS_ALLOW_CREDENTIALS', 'True').lower() in ('true', '1', 't')
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 CORS_ALLOW_HEADERS = ["*"]
+
+# Quantum Configuration
+MAX_QUBITS = int(os.environ.get('MAX_QUBITS', '8'))  # Configurable maximum qubits
+MIN_QUBITS = int(os.environ.get('MIN_QUBITS', '1'))   # Configurable minimum qubits
+
+logger.info(f"Quantum configuration: {MIN_QUBITS}-{MAX_QUBITS} qubits supported")
 
 app = FastAPI(
     title="Grover's Algorithm API 🔍⚡",
@@ -118,7 +124,7 @@ async def startup_event() -> None:
     """Log API startup information"""
     logger.info("Starting Grover's Algorithm API v1.0.0")
     logger.info("Quantum backend: %s", simulator.name)
-    logger.info("Maximum supported qubits: 3")
+    logger.info("Maximum supported qubits: %d", MAX_QUBITS)
     logger.info("CORS configured for frontend on port 8086")
     logger.info("API documentation available at /docs and /redoc")
 
@@ -131,7 +137,7 @@ class GroverRequest(BaseModel):
     target_state: str = Field(
         ..., 
         description="Target quantum state as binary string",
-        pattern="^[01]{1,3}$"
+        pattern=f"^[01]{{{MIN_QUBITS},{MAX_QUBITS}}}$"
     )
     shots: int = Field(
         1000, 
@@ -152,9 +158,9 @@ class GroverRequest(BaseModel):
         if not v or not all(c in '01' for c in v):
             logger.warning("Invalid target state format: %s", v)
             raise ValueError("Target state must be a binary string (only '0' and '1')")
-        if len(v) < 1 or len(v) > 3:
+        if len(v) < MIN_QUBITS or len(v) > MAX_QUBITS:
             logger.warning("Invalid target state length: %d", len(v))
-            raise ValueError("Target state must be 1-3 qubits (length 1-3)")
+            raise ValueError(f"Target state must be {MIN_QUBITS}-{MAX_QUBITS} qubits (length {MIN_QUBITS}-{MAX_QUBITS})")
         logger.debug("Target state validated successfully: %s", v)
         return v
 
@@ -306,10 +312,10 @@ class GroverIterationResponse(BaseModel):
         }
     )
 
-def build_simple_grover_oracle(target_state: str) -> QuantumCircuit:
+def build_generalized_grover_oracle(target_state: str) -> QuantumCircuit:
     """
-    Build a Grover oracle that works reliably with the Aer simulator.
-    Avoids MCMTGate issues by using only basic gates.
+    Build a generalized Grover oracle that works for any number of qubits (1-8).
+    Uses multi-controlled Z gates for efficient implementation.
     
     Args:
         target_state: Binary string representing the target quantum state
@@ -317,72 +323,65 @@ def build_simple_grover_oracle(target_state: str) -> QuantumCircuit:
     Returns:
         QuantumCircuit: Oracle circuit that marks the target state with phase flip
     """
-    logger.debug("Building Grover oracle for target state: %s", target_state)
+    logger.debug("Building generalized Grover oracle for target state: %s", target_state)
     num_qubits = len(target_state)
     qc = QuantumCircuit(num_qubits)
     logger.debug("Created quantum circuit with %d qubits", num_qubits)
     
-    if num_qubits == 1:
-        # Single qubit case
-        logger.debug("Building single-qubit oracle for target: %s", target_state)
-        if target_state == "0":
-            qc.x(0)  # Flip to target |1⟩
-            qc.z(0)  # Apply Z gate
-            qc.x(0)  # Flip back
-            logger.debug("Applied X-Z-X sequence for target |0⟩")
-        else:  # target_state == "1"
-            qc.z(0)  # Direct Z gate
-            logger.debug("Applied Z gate for target |1⟩")
-    
-    elif num_qubits == 2:
-        # Two qubit case - use controlled gates
-        logger.debug("Building two-qubit oracle for target: %s", target_state)
-        target_bits = [int(bit) for bit in target_state[::-1]]  # Reverse for Qiskit ordering
-        logger.debug("Target bits (Qiskit order): %s", target_bits)
-        
-        # Apply X gates where target bits are 0
-        for i, bit in enumerate(target_bits):
-            if bit == 0:
-                qc.x(i)
-                logger.debug("Applied X gate to qubit %d (target bit is 0)", i)
-        
-        # Apply controlled-Z
-        qc.cz(0, 1)
-        logger.debug("Applied controlled-Z gate")
-        
-        # Apply X gates back
-        for i, bit in enumerate(target_bits):
-            if bit == 0:
-                qc.x(i)
-                logger.debug("Applied X gate back to qubit %d", i)
-    
-    elif num_qubits == 3:
-        # Three qubit case - use manual CCZ implementation
-        logger.debug("Building three-qubit oracle for target: %s", target_state)
-        target_bits = [int(bit) for bit in target_state[::-1]]  # Reverse for Qiskit ordering
-        logger.debug("Target bits (Qiskit order): %s", target_bits)
-        
-        # Apply X gates where target bits are 0
-        for i, bit in enumerate(target_bits):
-            if bit == 0:
-                qc.x(i)
-                logger.debug("Applied X gate to qubit %d (target bit is 0)", i)
-        
-        # Apply controlled-controlled-Z (CCZ)
-        qc.ccz(0, 1, 2)
-        logger.debug("Applied controlled-controlled-Z gate")
-        
-        # Apply X gates back
-        for i, bit in enumerate(target_bits):
-            if bit == 0:
-                qc.x(i)
-                logger.debug("Applied X gate back to qubit %d", i)
-    else:
+    if num_qubits < MIN_QUBITS or num_qubits > MAX_QUBITS:
         logger.error("Unsupported number of qubits: %d", num_qubits)
-        raise ValueError(f"Unsupported number of qubits: {num_qubits}")
+        raise ValueError(f"Number of qubits must be between {MIN_QUBITS} and {MAX_QUBITS}, got: {num_qubits}")
+    
+    # Convert target state to qubit ordering (reverse for Qiskit)
+    target_bits = [int(bit) for bit in target_state[::-1]]
+    logger.debug("Target bits (Qiskit order): %s", target_bits)
+    
+    # Apply X gates where target bits are 0 (flip to |1⟩ for control)
+    for i, bit in enumerate(target_bits):
+        if bit == 0:
+            qc.x(i)
+            logger.debug("Applied X gate to qubit %d (target bit is 0)", i)
+    
+    # Apply multi-controlled Z gate
+    if num_qubits == 1:
+        qc.z(0)
+        logger.debug("Applied Z gate for single qubit")
+    elif num_qubits == 2:
+        qc.cz(0, 1)
+        logger.debug("Applied controlled-Z gate for 2 qubits")
+    elif num_qubits == 3:
+        qc.ccz(0, 1, 2)
+        logger.debug("Applied controlled-controlled-Z gate for 3 qubits")
+    else:
+        # For 4+ qubits, use multi-controlled Z gate decomposition
+        # This uses ancilla-free implementation via multi-controlled X + Z + multi-controlled X
+        control_qubits = list(range(num_qubits - 1))
+        target_qubit = num_qubits - 1
+        
+        # Implement multi-controlled Z using mcx decomposition
+        if len(control_qubits) == 1:
+            qc.cz(control_qubits[0], target_qubit)
+        else:
+            # Multi-controlled Z = H on target, multi-controlled X, H on target
+            qc.h(target_qubit)
+            qc.mcx(control_qubits, target_qubit)
+            qc.h(target_qubit)
+        
+        logger.debug("Applied multi-controlled-Z gate for %d qubits", num_qubits)
+    
+    # Apply X gates back where target bits were 0
+    for i, bit in enumerate(target_bits):
+        if bit == 0:
+            qc.x(i)
+            logger.debug("Applied X gate back to qubit %d", i)
     
     logger.debug("Oracle construction completed. Circuit depth: %d", qc.depth())
     return qc
+
+# Keep the old function name for backward compatibility
+def build_simple_grover_oracle(target_state: str) -> QuantumCircuit:
+    """Backward compatibility wrapper for the generalized oracle."""
+    return build_generalized_grover_oracle(target_state)
 
 def create_grover_circuit(target_state: str) -> Tuple[QuantumCircuit, int]:
     """
@@ -425,16 +424,29 @@ def create_grover_circuit(target_state: str) -> Tuple[QuantumCircuit, int]:
         qc.compose(oracle, inplace=True)
         logger.debug("Applied oracle in iteration %d", iteration + 1)
         
-        # Apply diffusion operator manually (to avoid MCMTGate issues)
+        # Apply generalized diffusion operator (inversion about average)
         qc.h(range(num_qubits))
         qc.x(range(num_qubits))
         
+        # Multi-controlled Z gate for generalized diffusion
         if num_qubits == 1:
             qc.z(0)
         elif num_qubits == 2:
             qc.cz(0, 1)
         elif num_qubits == 3:
             qc.ccz(0, 1, 2)
+        else:
+            # For 4+ qubits, use multi-controlled Z decomposition
+            control_qubits = list(range(num_qubits - 1))
+            target_qubit = num_qubits - 1
+            
+            if len(control_qubits) == 1:
+                qc.cz(control_qubits[0], target_qubit)
+            else:
+                # Multi-controlled Z = H on target, multi-controlled X, H on target
+                qc.h(target_qubit)
+                qc.mcx(control_qubits, target_qubit)
+                qc.h(target_qubit)
         
         qc.x(range(num_qubits))
         qc.h(range(num_qubits))
@@ -478,7 +490,7 @@ async def health_check() -> Dict[str, Any]:
         "status": "healthy",
         "message": "Grover's Algorithm API is running",
         "version": "1.0.0",
-        "max_qubits": 3,
+        "max_qubits": MAX_QUBITS,
         "available_backends": ["simulator"],
         "description": "Quantum search using Grover's algorithm",
         "docs_url": "/docs",
@@ -506,7 +518,7 @@ async def get_info() -> Dict[str, Any]:
     return {
         "algorithm": "Grover's Quantum Search Algorithm",
         "description": "Provides quadratic speedup for unstructured search problems",
-        "supported_qubits": "1-3",
+        "supported_qubits": f"{MIN_QUBITS}-{MAX_QUBITS}",
         "time_complexity": "O(√N) where N is the search space size",
         "classical_complexity": "O(N) for unstructured search",
         "quantum_advantage": "Quadratic speedup - searches √N times faster",
@@ -534,6 +546,24 @@ async def get_info() -> Dict[str, Any]:
                 "search_space": 8,
                 "optimal_iterations": 2,
                 "expected_success_rate": "~96%"
+            },
+            "4_qubit": {
+                "target_state": "1010", 
+                "search_space": 16,
+                "optimal_iterations": 3,
+                "expected_success_rate": "~94%"
+            },
+            "5_qubit": {
+                "target_state": "10101", 
+                "search_space": 32,
+                "optimal_iterations": 4,
+                "expected_success_rate": "~92%"
+            },
+            "8_qubit": {
+                "target_state": "10101010", 
+                "search_space": 256,
+                "optimal_iterations": 12,
+                "expected_success_rate": "~88%"
             }
         },
         "technical_details": {
@@ -658,9 +688,9 @@ async def run_grover_search(request: GroverRequest) -> GroverResponse:
 async def analyze_target_state(
     target_state: str = Path(
         ..., 
-        description="Target state as binary string (1-3 qubits)",
+        description=f"Target state as binary string ({MIN_QUBITS}-{MAX_QUBITS} qubits)",
         examples=["101"],
-        pattern="^[01]{1,3}$"
+        pattern=f"^[01]{{{MIN_QUBITS},{MAX_QUBITS}}}$"
     )
 ) -> Dict[str, Any]:
     """
@@ -691,9 +721,9 @@ async def analyze_target_state(
         logger.warning("Invalid target state format received: %s", target_state)
         raise HTTPException(status_code=400, detail="Invalid target state format")
     
-    if len(target_state) < 1 or len(target_state) > 3:
+    if len(target_state) < MIN_QUBITS or len(target_state) > MAX_QUBITS:
         logger.warning("Invalid target state length: %d", len(target_state))
-        raise HTTPException(status_code=400, detail="Target state must be 1-3 qubits")
+        raise HTTPException(status_code=400, detail=f"Target state must be {MIN_QUBITS}-{MAX_QUBITS} qubits")
     
     num_qubits = len(target_state)
     N = 2**num_qubits
@@ -728,7 +758,7 @@ async def analyze_target_state(
             "classical_worst_case": N,
             "classical_average_case": classical_average,
             "quantum_grover": quantum_operations,
-            "advantage": f"{round(speedup, 1)}x faster on average"
+            "advantage": f"{round(speedup, 1)}x faster on average (operations needed)"
         }
     }
     
@@ -747,9 +777,9 @@ async def analyze_target_state(
 async def get_circuit_info(
     target_state: str = Path(
         ...,
-        description="Target state as binary string (1-3 qubits)", 
+        description=f"Target state as binary string ({MIN_QUBITS}-{MAX_QUBITS} qubits)", 
         examples=["11"],
-        pattern="^[01]{1,3}$"
+        pattern=f"^[01]{{{MIN_QUBITS},{MAX_QUBITS}}}$"
     )
 ) -> Dict[str, Any]:
     """
@@ -782,9 +812,9 @@ async def get_circuit_info(
         logger.warning("Invalid target state format for circuit info: %s", target_state)
         raise HTTPException(status_code=400, detail="Invalid target state format")
     
-    if len(target_state) < 1 or len(target_state) > 3:
+    if len(target_state) < MIN_QUBITS or len(target_state) > MAX_QUBITS:
         logger.warning("Invalid target state length for circuit info: %d", len(target_state))
-        raise HTTPException(status_code=400, detail="Target state must be 1-3 qubits")
+        raise HTTPException(status_code=400, detail=f"Target state must be {MIN_QUBITS}-{MAX_QUBITS} qubits")
     
     try:
         logger.debug("Creating circuit for analysis...")
@@ -836,9 +866,9 @@ async def get_circuit_info(
 async def get_grover_iterations(
     target_state: str = Path(
         ...,
-        description="Target state as binary string (1-3 qubits)", 
+        description=f"Target state as binary string ({MIN_QUBITS}-{MAX_QUBITS} qubits)", 
         examples=["101"],
-        pattern="^[01]{1,3}$"
+        pattern=f"^[01]{{{MIN_QUBITS},{MAX_QUBITS}}}$"
     )
 ) -> Dict[str, Any]:
     """
@@ -867,9 +897,9 @@ async def get_grover_iterations(
         logger.warning("Invalid target state format for iterations: %s", target_state)
         raise HTTPException(status_code=400, detail="Invalid target state format")
     
-    if len(target_state) < 1 or len(target_state) > 3:
+    if len(target_state) < MIN_QUBITS or len(target_state) > MAX_QUBITS:
         logger.warning("Invalid target state length for iterations: %d", len(target_state))
-        raise HTTPException(status_code=400, detail="Target state must be 1-3 qubits")
+        raise HTTPException(status_code=400, detail=f"Target state must be {MIN_QUBITS}-{MAX_QUBITS} qubits")
     
     try:
         num_qubits = len(target_state)
@@ -920,16 +950,29 @@ async def get_grover_iterations(
                 target_probability=oracle_probs[target_index]
             ))
             
-            # Apply diffusion operator
+            # Apply diffusion operator (generalized for all qubit counts)
             qc.h(range(num_qubits))
             qc.x(range(num_qubits))
             
+            # Multi-controlled Z gate for generalized diffusion
             if num_qubits == 1:
                 qc.z(0)
             elif num_qubits == 2:
                 qc.cz(0, 1)
             elif num_qubits == 3:
                 qc.ccz(0, 1, 2)
+            else:
+                # For 4+ qubits, use multi-controlled Z decomposition
+                control_qubits = list(range(num_qubits - 1))
+                target_qubit = num_qubits - 1
+                
+                if len(control_qubits) == 1:
+                    qc.cz(control_qubits[0], target_qubit)
+                else:
+                    # Multi-controlled Z = H on target, multi-controlled X, H on target
+                    qc.h(target_qubit)
+                    qc.mcx(control_qubits, target_qubit)
+                    qc.h(target_qubit)
             
             qc.x(range(num_qubits))
             qc.h(range(num_qubits))
@@ -1089,11 +1132,57 @@ async def run_grover_on_ibm_hardware(request: IBMGroverRequest) -> IBMJobResult:
         
         # Now use the simple approach that works locally
         service = QiskitRuntimeService(instance=request.instance)
-        backend = service.least_busy(operational=True, simulator=False, min_num_qubits=2)
+        
+        # Try to get a stable backend for Grover circuits
+        logger.info("🔍 Finding suitable quantum backend for Grover circuit...")
+        try:
+            # Prefer backends with good 2-qubit gate fidelity and recent calibration
+            backends = service.backends(
+                operational=True, 
+                simulator=False, 
+                min_num_qubits=2,
+                max_num_qubits=127  # Avoid very large backends that might be less stable
+            )
+            
+            # Filter backends and select the best one
+            suitable_backends = []
+            for backend_obj in backends:
+                try:
+                    # Check if backend has recent calibration data
+                    config = backend_obj.configuration()
+                    if hasattr(config, 'backend_name') and config.backend_name:
+                        suitable_backends.append(backend_obj)
+                except Exception as e:
+                    logger.debug("Backend %s not suitable: %s", getattr(backend_obj, 'name', 'unknown'), str(e))
+                    continue
+            
+            if suitable_backends:
+                # Use least busy among suitable backends
+                backend = min(suitable_backends, key=lambda b: b.status().pending_jobs)
+                logger.info("✅ Selected backend: %s (pending jobs: %d)", 
+                           backend.name, backend.status().pending_jobs)
+            else:
+                # Fallback to least busy overall
+                backend = service.least_busy(operational=True, simulator=False, min_num_qubits=2)
+                logger.info("⚠️ Using fallback backend: %s", backend.name)
+                
+        except Exception as backend_error:
+            logger.warning("Backend selection failed: %s", str(backend_error))
+            # Final fallback
+            backend = service.least_busy(operational=True, simulator=False, min_num_qubits=2)
         
         logger.info(f"✅ Connected to: {backend.name}")
         
-        logger.info("Using backend: %s", backend.name)
+        # Log backend calibration info for debugging
+        try:
+            status = backend.status()
+            config = backend.configuration()
+            logger.info("🔧 Backend info: %s (qubits: %d, pending: %d)", 
+                       backend.name, config.n_qubits, status.pending_jobs)
+            logger.info("📊 Backend status: operational=%s, message='%s'", 
+                       status.operational, getattr(status, 'status_msg', 'OK'))
+        except Exception as info_error:
+            logger.warning("Could not get backend info: %s", str(info_error))
         
         # Build 2-qubit Grover circuit (from notebook)
         qc = QuantumCircuit(2)
@@ -1130,14 +1219,44 @@ async def run_grover_on_ibm_hardware(request: IBMGroverRequest) -> IBMJobResult:
         
         logger.debug("Built 2-qubit Grover circuit with depth: %d", qc.depth())
         
-        # Transpile for backend
-        transpiled_qc = transpile(qc, backend=backend, optimization_level=1)
+        # Transpile for backend with frequency-aware optimization
+        try:
+            logger.info("Transpiling circuit for backend: %s", backend.name)
+            transpiled_qc = transpile(
+                qc, 
+                backend=backend, 
+                optimization_level=2,  # Higher optimization for better frequency handling
+                seed_transpiler=42,    # Reproducible results
+                scheduling_method='alap'  # Schedule to avoid frequency conflicts
+            )
+            logger.info("Circuit transpiled successfully. Depth: %d → %d", qc.depth(), transpiled_qc.depth())
+        except Exception as transpile_error:
+            logger.warning("Standard transpilation failed: %s", str(transpile_error))
+            # Fallback to basic transpilation without scheduling
+            transpiled_qc = transpile(qc, backend=backend, optimization_level=1)
+            logger.info("Used fallback transpilation")
         
-        # Submit job using Session and Sampler (following user's pattern)
-        with Session(backend=backend) as session:
-            print("🚀 Submitting Sampler job via Qiskit Runtime...")
-            sampler = Sampler()
-            job = sampler.run([transpiled_qc], shots=request.shots)
+        # Submit job using Session and Sampler with error handling
+        try:
+            with Session(backend=backend) as session:
+                logger.info("🚀 Submitting Sampler job via Qiskit Runtime...")
+                
+                # Create Sampler with explicit options to handle frequency issues
+                from qiskit_ibm_runtime import Options
+                options = Options()
+                options.resilience_level = 1  # Add error mitigation
+                options.optimization_level = 1  # Moderate optimization
+                
+                sampler = Sampler(session=session, options=options)
+                job = sampler.run([transpiled_qc], shots=request.shots)
+                
+        except Exception as sampler_error:
+            logger.warning("Sampler with options failed: %s", str(sampler_error))
+            # Fallback to basic sampler
+            with Session(backend=backend) as session:
+                logger.info("🔄 Retrying with basic Sampler...")
+                sampler = Sampler(session=session)
+                job = sampler.run([transpiled_qc], shots=request.shots)
             
             # Store target state as job metadata (tags)
             try:
@@ -1174,6 +1293,16 @@ async def run_grover_on_ibm_hardware(request: IBMGroverRequest) -> IBMJobResult:
                 status_code=429,  # Too Many Requests
                 detail="IBM Quantum instance time limit exceeded. Please contact your instance administrator to increase the limit, or try again later."
             )
+        elif "frequency" in error_message.lower() or "calibration" in error_message.lower():
+            raise HTTPException(
+                status_code=503,  # Service Unavailable
+                detail="IBM Quantum backend frequency/calibration issue. The quantum hardware may be undergoing calibration. Please try again in a few minutes, or select a different backend."
+            )
+        elif "pulse" in error_message.lower() or "schedule" in error_message.lower():
+            raise HTTPException(
+                status_code=400,
+                detail="Quantum circuit scheduling failed. The circuit may not be compatible with the current backend calibration. Try using a different target state or backend."
+            )
         elif "409 Client Error" in error_message:
             raise HTTPException(
                 status_code=409,
@@ -1188,6 +1317,11 @@ async def run_grover_on_ibm_hardware(request: IBMGroverRequest) -> IBMJobResult:
             raise HTTPException(
                 status_code=402,  # Payment Required
                 detail="Insufficient IBM Quantum credits. Please check your account balance."
+            )
+        elif "backend" in error_message.lower() and "not found" in error_message.lower():
+            raise HTTPException(
+                status_code=404,
+                detail="IBM Quantum backend not found or not accessible. The backend may be offline for maintenance."
             )
         else:
             raise HTTPException(

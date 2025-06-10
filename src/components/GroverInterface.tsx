@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +40,13 @@ interface GroverResult {
   circuit_depth: number;
   execution_time_ms: number;
   timestamp: string;
+  timing_breakdown?: {
+    quantum_execution: number;
+    search_api: number;
+    analysis_api: number;
+    iterations_api: number;
+    total_time: number;
+  };
 }
 
 interface AnalysisResult {
@@ -79,7 +85,7 @@ interface IterationResult {
 }
 
 const GroverInterface = () => {
-  const [targetState, setTargetState] = useState("101");
+  const [targetState, setTargetState] = useState("101010");
   const [shots, setShots] = useState(1000);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<GroverResult | null>(null);
@@ -89,15 +95,20 @@ const GroverInterface = () => {
 
   const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8087";
 
+  // Make qubit limit configurable (can be overridden via environment)
+  const MAX_QUBITS = parseInt(import.meta.env.VITE_MAX_QUBITS || "8");
+  const MIN_QUBITS = parseInt(import.meta.env.VITE_MIN_QUBITS || "1");
+
   const validateTargetState = (state: string): boolean => {
-    return /^[01]{1,3}$/.test(state);
+    const regex = new RegExp(`^[01]{${MIN_QUBITS},${MAX_QUBITS}}$`);
+    return regex.test(state);
   };
 
   const runCompleteSearch = async () => {
     if (!validateTargetState(targetState)) {
       toast({
         title: "Invalid Target State",
-        description: "Please enter a binary string with 1-3 qubits (e.g., '101')",
+        description: `Please enter a binary string with ${MIN_QUBITS}-${MAX_QUBITS} qubits (e.g., '101', '10101010')`,
         variant: "destructive",
       });
       return;
@@ -113,10 +124,12 @@ const GroverInterface = () => {
     }
 
     setIsLoading(true);
+    const startTime = performance.now(); // Start comprehensive timing
     
     try {
       // Step 1: Run the actual Grover search
       console.log(`🚀 API Call: POST ${API_BASE}/grover/search`, { target_state: targetState, shots: shots });
+      const searchStart = performance.now();
       const searchResponse = await fetch(`${API_BASE}/grover/search`, {
         method: "POST",
         headers: {
@@ -134,30 +147,54 @@ const GroverInterface = () => {
       }
 
       const searchData: GroverResult = await searchResponse.json();
-      console.log(`✅ Search completed:`, searchData);
+      const searchTime = performance.now() - searchStart;
+      console.log(`✅ Search completed in ${searchTime.toFixed(1)}ms:`, searchData);
+      
+      // Update the result with accurate total timing - we'll update this at the end
       setResult(searchData);
 
       // Step 2: Get performance analysis
       console.log(`🚀 API Call: GET ${API_BASE}/grover/analyze/${targetState}`);
+      const analysisStart = performance.now();
       const analysisResponse = await fetch(`${API_BASE}/grover/analyze/${targetState}`);
+      let analysisTime = 0;
       if (analysisResponse.ok) {
         const analysisData: AnalysisResult = await analysisResponse.json();
-        console.log(`✅ Analysis completed:`, analysisData);
+        analysisTime = performance.now() - analysisStart;
+        console.log(`✅ Analysis completed in ${analysisTime.toFixed(1)}ms:`, analysisData);
         setAnalysis(analysisData);
       }
 
-      // Step 3: Get iteration details
+      // Step 3: Get iteration details (often the slowest part for graph rendering)
       console.log(`🚀 API Call: GET ${API_BASE}/grover/iterations/${targetState}`);
+      const iterationsStart = performance.now();
       const iterationsResponse = await fetch(`${API_BASE}/grover/iterations/${targetState}`);
+      let iterationsTime = 0;
       if (iterationsResponse.ok) {
         const iterationsData: IterationResult = await iterationsResponse.json();
-        console.log(`✅ Iterations completed:`, iterationsData);
+        iterationsTime = performance.now() - iterationsStart;
+        console.log(`✅ Iterations completed in ${iterationsTime.toFixed(1)}ms:`, iterationsData);
         setIterations(iterationsData);
       }
       
+      // Calculate total time and update result with comprehensive timing
+      const totalTime = performance.now() - startTime;
+      const updatedResult = {
+        ...searchData,
+        execution_time_ms: totalTime, // Override with comprehensive timing
+        timing_breakdown: {
+          quantum_execution: searchData.execution_time_ms, // Original quantum-only time
+          search_api: searchTime,
+          analysis_api: analysisTime,
+          iterations_api: iterationsTime,
+          total_time: totalTime
+        }
+      };
+      setResult(updatedResult);
+      
       toast({
         title: "Complete Analysis Finished",
-        description: `Search completed with ${searchData.success_rate.toFixed(1)}% success rate. All panels loaded.`,
+        description: `Search completed with ${searchData.success_rate.toFixed(1)}% success rate in ${totalTime.toFixed(0)}ms. All panels loaded.`,
       });
     } catch (error: any) {
       console.error("Complete search failed:", error);
@@ -171,7 +208,20 @@ const GroverInterface = () => {
     }
   };
 
-  const exampleStates = ["0", "1", "00", "01", "10", "11", "000", "001", "010", "011", "100", "101", "110", "111"];
+  const exampleStates = [
+    // 1-qubit
+    "0", "1", 
+    // 2-qubit  
+    "00", "01", "10", "11", 
+    // 3-qubit
+    "000", "001", "010", "011", "100", "101", "110", "111",
+    // 4-qubit examples
+    "0000", "0101", "1010", "1111",
+    // 5-qubit examples  
+    "00000", "10101", "01010", "11111",
+    // 6-qubit examples
+    "000000", "101010", "010101", "111111"
+  ];
 
   return (
     <div className="space-y-8">
@@ -180,7 +230,8 @@ const GroverInterface = () => {
           Grover's Quantum Search Algorithm
         </h2>
         <p className="text-slate-300 max-w-2xl mx-auto">
-          Experience the quantum advantage! Search unsorted databases with quadratic speedup over classical algorithms.
+          Experience the quantum advantage! Search unsorted databases with quadratic speedup over classical algorithms. 
+          Supports 1-8 qubits (up to 256 possible states).
         </p>
       </div>
 
@@ -208,7 +259,7 @@ const GroverInterface = () => {
                   className="bg-slate-900/50 border-slate-600 text-slate-100"
                 />
                 <p className="text-xs text-slate-400">
-                  Valid: 1-3 qubits (0, 1, 00-11, 000-111)
+                  Valid: {MIN_QUBITS}-{MAX_QUBITS} qubits (e.g., 0, 101, 10101, 10101010)
                 </p>
               </div>
 
@@ -228,27 +279,72 @@ const GroverInterface = () => {
                 </p>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label className="text-slate-300">Quick Examples</Label>
-                <div className="flex flex-wrap gap-2">
-                  {exampleStates.map((state) => {
+                
+                {/* Compact grid layout with curated examples */}
+                <div className="grid grid-cols-6 gap-1">
+                  {[
+                    // 1-2 qubits - basic patterns
+                    "0", "1", "01", "10", "11",
+                    // 3 qubits - corner cases  
+                    "000", "101", "111",
+                    // 4 qubits - interesting patterns
+                    "0000", "0101", "1010", "1111",
+                    // 5 qubits - alternating patterns
+                    "00000", "10101", "01010", "11111",
+                    // 6 qubits - more complex
+                    "000000", "101010", "010101", "111111",
+                    // 7 qubits - scaling up
+                    "0000000", "1010101", "0101010", "1111111",
+                    // 8 qubits - maximum complexity
+                    "00000000", "10101010", "01010101", "11111111"
+                  ].filter(state => state.length <= MAX_QUBITS).map((state) => {
                     const isSelected = state === targetState;
+                    const qubitCount = state.length;
+                    const colorClass = {
+                      1: "border-green-400/50 text-green-300",
+                      2: "border-blue-400/50 text-blue-300", 
+                      3: "border-purple-400/50 text-purple-300",
+                      4: "border-pink-400/50 text-pink-300",
+                      5: "border-orange-400/50 text-orange-300",
+                      6: "border-yellow-400/50 text-yellow-300",
+                      7: "border-red-400/50 text-red-300",
+                      8: "border-cyan-400/50 text-cyan-300"
+                    }[qubitCount] || "border-slate-400/50 text-slate-300";
+                    
                     return (
                       <Button
                         key={state}
                         variant={isSelected ? "default" : "outline"}
                         size="sm"
                         onClick={() => setTargetState(state)}
-                        className={
+                        className={`text-xs px-1 py-1 h-6 ${
                           isSelected
                             ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-500"
-                            : "border-blue-400/50 text-blue-200 hover:bg-blue-600/20"
-                        }
+                            : `${colorClass} hover:bg-blue-600/20`
+                        }`}
+                        title={`${qubitCount} qubit${qubitCount !== 1 ? 's' : ''} - ${Math.pow(2, qubitCount)} states`}
                       >
                         {state}
                       </Button>
                     );
                   })}
+                </div>
+                
+                {/* Compact legend */}
+                <div className="text-xs text-slate-400 space-y-1">
+                  <div className="flex flex-wrap gap-3">
+                    <span className="text-green-300">1q</span>
+                    <span className="text-blue-300">2q</span>
+                    <span className="text-purple-300">3q</span>
+                    <span className="text-pink-300">4q</span>
+                    <span className="text-orange-300">5q</span>
+                    <span className="text-yellow-300">6q</span>
+                    <span className="text-red-300">7q</span>
+                    <span className="text-cyan-300">8q</span>
+                  </div>
+                  <p>Hover for search space size • Color indicates qubit count</p>
                 </div>
               </div>
             </div>
@@ -390,23 +486,39 @@ const GroverInterface = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300">Classical (worst case)</span>
-                    <Badge variant="outline" className="border-red-400/50 text-red-300">
-                      {analysis.performance_comparison.classical_worst_case} tries
-                    </Badge>
+                    <div className="text-right">
+                      <Badge variant="outline" className="border-red-400/50 text-red-300">
+                        {analysis.performance_comparison.classical_worst_case} tries
+                      </Badge>
+                      <div className="text-xs text-red-300/70 mt-1">
+                        ~{(analysis.performance_comparison.classical_worst_case * 0.001).toFixed(analysis.performance_comparison.classical_worst_case >= 1000 ? 1 : 3)}ms
+                      </div>
+                    </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300">Classical (average)</span>
-                    <Badge variant="outline" className="border-yellow-400/50 text-yellow-300">
-                      {analysis.performance_comparison.classical_average_case} tries
-                    </Badge>
+                    <div className="text-right">
+                      <Badge variant="outline" className="border-yellow-400/50 text-yellow-300">
+                        {analysis.performance_comparison.classical_average_case} tries
+                      </Badge>
+                      <div className="text-xs text-yellow-300/70 mt-1">
+                        ~{(analysis.performance_comparison.classical_average_case * 0.001).toFixed(analysis.performance_comparison.classical_average_case >= 1000 ? 1 : 3)}ms
+                      </div>
+                    </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300">Quantum (Grover's)</span>
-                    <Badge variant="outline" className="border-green-400/50 text-green-300">
-                      {analysis.performance_comparison.quantum_grover} iterations
-                    </Badge>
+                    <div className="text-right">
+                      <Badge variant="outline" className="border-green-400/50 text-green-300">
+                        {analysis.performance_comparison.quantum_grover} iterations
+                      </Badge>
+                      <div className="text-xs text-green-300/70 mt-1">
+                        ~{(analysis.performance_comparison.quantum_grover * 0.1).toFixed(1)}ms
+                      </div>
+                    </div>
                   </div>
                 </div>
+                
                 <Alert className="mt-4 border-blue-400/50 bg-blue-600/10">
                   <CheckCircle className="h-4 w-4 text-blue-400" />
                   <AlertDescription className="text-blue-200">
@@ -536,10 +648,15 @@ const GroverInterface = () => {
                   </div>
                 </div>
                 <div className="text-center space-y-2">
-                  <div className="text-sm text-slate-400">Execution Time</div>
+                  <div className="text-sm text-slate-400">Total Time</div>
                   <div className="text-2xl font-bold text-blue-400">
-                    {result.execution_time_ms.toFixed(1)}ms
+                    {result.execution_time_ms.toFixed(0)}ms
                   </div>
+                  {result.timing_breakdown && (
+                    <div className="text-xs text-slate-500">
+                      Quantum: {result.timing_breakdown.quantum_execution.toFixed(0)}ms
+                    </div>
+                  )}
                 </div>
                 <div className="text-center space-y-2">
                   <div className="text-sm text-slate-400">Circuit Depth</div>
@@ -554,6 +671,54 @@ const GroverInterface = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Enhanced Timing Breakdown */}
+              {result.timing_breakdown && (
+                <div className="mt-6 p-4 bg-slate-700/30 rounded-lg">
+                  <div className="text-sm font-semibold text-slate-300 mb-3">⏱️ Performance Breakdown</div>
+                  
+                  {/* Primary Operations */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-green-300 font-medium text-sm">🔍 Quantum Search</span>
+                        <span className="text-green-400 font-bold">{result.timing_breakdown.quantum_execution.toFixed(1)}ms</span>
+                      </div>
+                      <div className="text-xs text-green-200/80">
+                        Actual algorithm execution - the "fast" part
+                      </div>
+                    </div>
+                    
+                    <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-orange-300 font-medium text-sm">📊 Visualization Generation</span>
+                        <span className="text-orange-400 font-bold">{result.timing_breakdown.iterations_api.toFixed(1)}ms</span>
+                      </div>
+                      <div className="text-xs text-orange-200/80">
+                        Step-by-step data for Algorithm Evolution graph
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Secondary Operations */}
+                  <div className="grid grid-cols-2 gap-3 text-xs border-t border-slate-600 pt-3">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Performance Analysis:</span>
+                      <span className="text-blue-400">{result.timing_breakdown.analysis_api.toFixed(1)}ms</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Network/UI:</span>
+                      <span className="text-purple-400">
+                        {(result.timing_breakdown.total_time - result.timing_breakdown.search_api - result.timing_breakdown.analysis_api - result.timing_breakdown.iterations_api).toFixed(1)}ms
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3 text-xs text-slate-500 bg-slate-800/50 rounded p-2">
+                    💡 <strong>Why the difference?</strong> The quantum search is extremely fast, but generating detailed step-by-step visualization data requires simulating the entire algorithm multiple times to track probability evolution.
+                  </div>
+                </div>
+              )}
 
               <Separator className="bg-slate-600" />
 
@@ -601,28 +766,105 @@ const GroverInterface = () => {
         <CardHeader>
           <CardTitle className="text-slate-100">How Grover's Algorithm Works</CardTitle>
           <CardDescription className="text-slate-300">
-            Understanding the quantum search advantage
+            Understanding the quantum search advantage and the oracle concept
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Key Concept */}
+          <Alert className="border-amber-400/50 bg-amber-600/10">
+            <AlertCircle className="h-4 w-4 text-amber-400" />
+            <AlertDescription className="text-amber-200">
+              <strong>Key Insight:</strong> The algorithm doesn't know the answer - the oracle (black box) does! 
+              Grover's algorithm amplifies the probability of finding whatever state the oracle marks, 
+              without knowing what that state is beforehand.
+            </AlertDescription>
+          </Alert>
+
+          {/* The Oracle Concept */}
+          <div className="bg-slate-700/30 rounded-lg p-4 space-y-3">
+            <h4 className="font-semibold text-orange-300 flex items-center">
+              <Target className="mr-2 h-4 w-4" />
+              The Oracle Mystery
+            </h4>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Think of the oracle as a "black box" that can instantly recognize the target item when it sees it, 
+              but can't tell you what or where it is. The oracle flips the phase of the target state, 
+              essentially "marking" it without revealing its location. The algorithm then uses quantum interference 
+              to amplify this marked state through repeated iterations.
+            </p>
+          </div>
+
+          {/* Algorithm Steps */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <h4 className="font-semibold text-blue-300">1. Initialization</h4>
-              <p className="text-sm text-slate-400">
-                Create equal superposition of all possible states using Hadamard gates
+            <div className="space-y-3">
+              <h4 className="font-semibold text-blue-300 flex items-center">
+                <Zap className="mr-2 h-4 w-4" />
+                1. Initialization
+              </h4>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Create equal superposition of all possible states using Hadamard gates. 
+                Every state starts with equal probability - complete uncertainty about where the target is.
               </p>
             </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold text-purple-300">2. Oracle + Diffusion</h4>
-              <p className="text-sm text-slate-400">
-                Repeatedly apply oracle (marks target) and diffusion operator (amplifies marked state)
+            <div className="space-y-3">
+              <h4 className="font-semibold text-purple-300 flex items-center">
+                <Activity className="mr-2 h-4 w-4" />
+                2. Oracle + Diffusion
+              </h4>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                The oracle "marks" the target by flipping its phase (invisible to probability). 
+                The diffusion operator then performs "inversion about average," rotating the probability 
+                amplitudes to increase the target's chance of being measured.
               </p>
             </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold text-green-300">3. Measurement</h4>
-              <p className="text-sm text-slate-400">
-                After optimal iterations, measure to find target state with high probability
+            <div className="space-y-3">
+              <h4 className="font-semibold text-green-300 flex items-center">
+                <BarChart3 className="mr-2 h-4 w-4" />
+                3. Measurement
+              </h4>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                After optimal iterations (~√N), the target state has maximum probability. 
+                Measurement collapses the quantum superposition, revealing the target with high probability.
               </p>
+            </div>
+          </div>
+
+          {/* How it Works in Practice */}
+          <div className="bg-slate-700/30 rounded-lg p-4 space-y-3">
+            <h4 className="font-semibold text-cyan-300">How Quantum Interference Creates the Speedup</h4>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              The magic happens through quantum interference. Each iteration rotates the probability amplitudes 
+              in a way that constructively amplifies the target state while destructively interfering with non-target states. 
+              This geometric rotation in the quantum amplitude space creates the quadratic speedup - 
+              instead of checking items one by one (classical), we rotate toward the answer in √N steps.
+            </p>
+          </div>
+          
+          {/* Quantum Advantage */}
+          {/* Performance scaling information */}
+          <div className="bg-slate-700/30 rounded-lg p-4 space-y-3">
+            <h4 className="font-semibold text-purple-300">Scalability & Performance</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-400">4 qubits</div>
+                <div className="text-slate-400">16 states</div>
+                <div className="text-green-400">3 iterations</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-400">5 qubits</div>
+                <div className="text-slate-400">32 states</div>
+                <div className="text-green-400">4 iterations</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-400">6 qubits</div>
+                <div className="text-slate-400">64 states</div>
+                <div className="text-green-400">6 iterations</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-400">8 qubits</div>
+                <div className="text-slate-400">256 states</div>
+                <div className="text-green-400">12 iterations</div>
+              </div>
             </div>
           </div>
           
@@ -630,7 +872,8 @@ const GroverInterface = () => {
             <AlertCircle className="h-4 w-4 text-cyan-400" />
             <AlertDescription className="text-cyan-200">
               <strong>Quantum Advantage:</strong> Grover's algorithm provides a quadratic speedup, requiring only O(√N) 
-              operations compared to O(N) for classical search, where N is the size of the search space.
+              operations compared to O(N) for classical search. For a database of 1 million items, classical search 
+              needs ~500,000 queries on average, while Grover's needs only ~1,000 quantum operations.
             </AlertDescription>
           </Alert>
         </CardContent>

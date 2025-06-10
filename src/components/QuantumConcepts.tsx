@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Atom, Zap, Network, Binary, Target } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Atom, Zap, Network, Binary, Target, Lightbulb, ArrowRight } from "lucide-react";
 
 const QuantumConcepts = () => {
   const concepts = [
@@ -108,6 +109,110 @@ const QuantumConcepts = () => {
           Understanding these core principles is essential for grasping how quantum computers work and why they're revolutionary
         </p>
       </div>
+
+      {/* Quantum Computing Intuition Panel */}
+      <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
+        <CardHeader>
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-lg bg-blue-600/20">
+              <Lightbulb className="h-8 w-8 text-blue-400" />
+            </div>
+            <div>
+              <CardTitle className="text-slate-100 text-xl">What Makes Quantum Computing Revolutionary?</CardTitle>
+              <CardDescription className="text-slate-300">
+                How quantum mechanics transforms computation from classical limitations to exponential possibilities
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Core Insight */}
+          <Alert className="border-blue-400/50 bg-blue-600/10">
+            <Lightbulb className="h-4 w-4 text-blue-400" />
+            <AlertDescription className="text-blue-200">
+              <strong>Key Insight:</strong> While classical computers process information sequentially (one calculation at a time), 
+              quantum computers leverage quantum mechanics to explore many possibilities simultaneously, creating exponential computational advantages.
+            </AlertDescription>
+          </Alert>
+
+          {/* How the Concepts Connect */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <div className="space-y-4">
+              <h4 className="font-semibold text-slate-200 text-lg">The Quantum Advantage Chain</h4>
+              <div className="space-y-2">
+                <div className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                  <div className="flex items-center space-x-3 mb-1">
+                    <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                    <span className="font-medium text-blue-300">Qubits</span>
+                  </div>
+                  <p className="text-xs text-slate-400 ml-5">Replace classical bits with quantum superposition, enabling exponentially larger computational spaces</p>
+                </div>
+                <div className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                  <div className="flex items-center space-x-3 mb-1">
+                    <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                    <span className="font-medium text-purple-300">Superposition</span>
+                  </div>
+                  <p className="text-xs text-slate-400 ml-5">Enables parallel exploration of all possible solutions simultaneously in quantum space</p>
+                </div>
+                <div className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                  <div className="flex items-center space-x-3 mb-1">
+                    <div className="w-2 h-2 rounded-full bg-cyan-400"></div>
+                    <span className="font-medium text-cyan-300">Entanglement</span>
+                  </div>
+                  <p className="text-xs text-slate-400 ml-5">Creates powerful quantum correlations that link qubits across any distance instantly</p>
+                </div>
+                <div className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                  <div className="flex items-center space-x-3 mb-1">
+                    <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                    <span className="font-medium text-green-300">Quantum Gates</span>
+                  </div>
+                  <p className="text-xs text-slate-400 ml-5">Manipulate quantum states through precise rotations on the Bloch sphere</p>
+                </div>
+                <div className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                  <div className="flex items-center space-x-3 mb-1">
+                    <div className="w-2 h-2 rounded-full bg-orange-400"></div>
+                    <span className="font-medium text-orange-300">Measurement</span>
+                  </div>
+                  <p className="text-xs text-slate-400 ml-5">Extracts the quantum-computed answer by collapsing superposition to classical bits</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="font-semibold text-slate-200 text-lg">Real-World Impact</h4>
+              <div className="space-y-2">
+                <div className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                  <h5 className="font-medium text-blue-300 mb-1">💊 Drug Discovery</h5>
+                  <p className="text-xs text-slate-400">Simulate molecular interactions impossible for classical computers.</p>
+                </div>
+                <div className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                  <h5 className="font-medium text-green-300 mb-1">🔐 Cryptography</h5>
+                  <p className="text-xs text-slate-400">Break current encryption with Shor's, enable unbreakable quantum security.</p>
+                </div>
+                <div className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                  <h5 className="font-medium text-purple-300 mb-1">🔍 Search & Optimization</h5>
+                  <p className="text-xs text-slate-400">Quadratic speedup for database search and optimization problems.</p>
+                </div>
+                <div className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                  <h5 className="font-medium text-cyan-300 mb-1">🧪 Materials Science</h5>
+                  <p className="text-xs text-slate-400">Discover new materials with revolutionary energy and superconductivity properties.</p>
+                </div>
+                <div className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                  <h5 className="font-medium text-orange-300 mb-1">💰 Financial Modeling</h5>
+                  <p className="text-xs text-slate-400">Optimize portfolio management and risk analysis beyond classical limits.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom insight */}
+          <div className="border-t border-slate-600 pt-4">
+            <p className="text-slate-300 text-center italic">
+              "Quantum computing doesn't just make computers faster - it fundamentally changes what problems we can solve."
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Core Concepts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

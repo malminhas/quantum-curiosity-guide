@@ -10,6 +10,7 @@ const QubitVisualization = () => {
   const [amplitude1, setAmplitude1] = useState([0.7]);
   const [phase, setPhase] = useState([0]);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [activePreset, setActivePreset] = useState<string | null>(null);
 
   // Normalize amplitudes to ensure |α|² + |β|² = 1
   const normalizeAmplitudes = (a0: number, a1: number) => {
@@ -22,6 +23,34 @@ const QubitVisualization = () => {
   const prob0 = norm_a0 * norm_a0;
   const prob1 = norm_a1 * norm_a1;
 
+  // Check if current state matches any preset or set to "Random"
+  useEffect(() => {
+    if (!isAnimating) {
+      const tolerance = 0.01;
+      let matchesPreset = false;
+      
+      for (const preset of presetStates) {
+        const { norm_a0: preset_a0, norm_a1: preset_a1 } = normalizeAmplitudes(preset.a0, preset.a1);
+        if (
+          Math.abs(norm_a0 - preset_a0) <= tolerance &&
+          Math.abs(norm_a1 - preset_a1) <= tolerance &&
+          Math.abs(phase[0] - preset.phase) <= 1
+        ) {
+          if (activePreset !== preset.name) {
+            setActivePreset(preset.name);
+          }
+          matchesPreset = true;
+          break;
+        }
+      }
+      
+      // If no preset matches, mark as "Random" (unless we're already random or null)
+      if (!matchesPreset && activePreset !== "Random") {
+        setActivePreset("Random");
+      }
+    }
+  }, [amplitude0, amplitude1, phase, activePreset, isAnimating]);
+
   const presetStates = [
     { name: "|0⟩", a0: 1, a1: 0, phase: 0, description: "Classical 0 state" },
     { name: "|1⟩", a0: 0, a1: 1, phase: 0, description: "Classical 1 state" },
@@ -33,10 +62,12 @@ const QubitVisualization = () => {
     setAmplitude0([preset.a0]);
     setAmplitude1([preset.a1]);
     setPhase([preset.phase]);
+    setActivePreset(preset.name);
   };
 
   const animateRandomState = () => {
     setIsAnimating(true);
+    setActivePreset("Random"); // Set to Random when randomizing
     const duration = 2000;
     const steps = 60;
     const interval = duration / steps;
@@ -90,12 +121,12 @@ const QubitVisualization = () => {
               Qubit State Controls
             </CardTitle>
             <CardDescription className="text-slate-300 space-y-2">
-              <div>Adjust the quantum state: |ψ⟩ = α|0⟩ + βe^(iφ)|1⟩</div>
-              <div className="text-xs text-slate-400 mt-2">
+              <span className="block">Adjust the quantum state: |ψ⟩ = α|0⟩ + βe^(iφ)|1⟩</span>
+              <span className="block text-xs text-slate-400 mt-2">
                 <strong className="text-purple-300">Amplitudes (α, β)</strong> determine the probability of measuring |0⟩ or |1⟩. 
                 <strong className="text-cyan-300">Phase (φ)</strong> creates interference effects crucial for quantum algorithms.
                 The amplitudes are automatically normalized so |α|² + |β|² = 1.
-              </div>
+              </span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -150,7 +181,11 @@ const QubitVisualization = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => applyPreset(preset)}
-                  className="border-purple-400/50 text-purple-200 hover:bg-purple-600/20"
+                  className={`border-purple-400/50 text-purple-200 hover:bg-purple-600/20 transition-all duration-300 ${
+                    activePreset === preset.name 
+                      ? 'bg-purple-600/40 border-purple-300 text-purple-100 shadow-lg shadow-purple-500/25' 
+                      : ''
+                  }`}
                 >
                   {preset.name}
                 </Button>
@@ -160,7 +195,11 @@ const QubitVisualization = () => {
                 size="sm"
                 onClick={animateRandomState}
                 disabled={isAnimating}
-                className="border-cyan-400/50 text-cyan-200 hover:bg-cyan-600/20"
+                className={`border-cyan-400/50 text-cyan-200 hover:bg-cyan-600/20 transition-all duration-300 ${
+                  activePreset === "Random" 
+                    ? 'bg-cyan-600/40 border-cyan-300 text-cyan-100 shadow-lg shadow-cyan-500/25' 
+                    : ''
+                }`}
               >
                 <RotateCcw className="mr-1 h-3 w-3" />
                 Random
@@ -174,13 +213,13 @@ const QubitVisualization = () => {
           <CardHeader>
             <CardTitle className="text-slate-100">Bloch Sphere</CardTitle>
             <CardDescription className="text-slate-300 space-y-2">
-              <div>3D representation of qubit state showing position on the quantum sphere</div>
-              <div className="text-xs text-slate-400 mt-2">
+              <span className="block">3D representation of qubit state showing position on the quantum sphere</span>
+              <span className="block text-xs text-slate-400 mt-2">
                 The <strong className="text-purple-300">purple dot</strong> represents your qubit state. 
                 <strong className="text-cyan-300">Top/bottom</strong> = |0⟩/|1⟩ states, 
                 <strong className="text-green-300">left/right</strong> = |-⟩/|+⟩ superposition states.
                 Distance from center shows "purity" - pure states are on the surface.
-              </div>
+              </span>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -197,15 +236,16 @@ const QubitVisualization = () => {
                     
                     {/* State vector */}
                     <div 
-                      className="absolute w-1 h-1 bg-purple-400 rounded-full transition-all duration-300"
+                      className="absolute w-4 h-4 bg-purple-400 rounded-full transition-all duration-700 ease-out"
                       style={{
                         left: `${50 + 40 * Math.cos(phase[0] * Math.PI / 180) * norm_a1}%`,
                         top: `${50 - 40 * (norm_a0 - norm_a1)}%`,
                         transform: 'translate(-50%, -50%)',
-                        boxShadow: `0 0 10px rgba(168, 85, 247, 0.8)`
+                        boxShadow: `0 0 15px rgba(168, 85, 247, 0.9), 0 0 30px rgba(168, 85, 247, 0.5)`
                       }}
                     >
-                      <div className="absolute inset-0 bg-purple-400 rounded-full animate-pulse"></div>
+                      <div className="absolute inset-0 bg-purple-300 rounded-full animate-pulse opacity-70"></div>
+                      <div className="absolute inset-1 bg-purple-200 rounded-full opacity-50"></div>
                     </div>
                     
                     {/* Axis labels */}

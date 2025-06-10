@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { CircuitBoard, Play, RotateCcw, Zap } from "lucide-react";
 const CircuitVisualization = () => {
   const [selectedGates, setSelectedGates] = useState<string[]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [activeCircuit, setActiveCircuit] = useState<string | null>(null);
 
   const gates = [
     { name: "H", symbol: "H", description: "Hadamard Gate - Creates superposition", color: "blue" },
@@ -20,10 +21,12 @@ const CircuitVisualization = () => {
 
   const addGate = (gateName: string) => {
     setSelectedGates([...selectedGates, gateName]);
+    setActiveCircuit(null); // Clear active circuit when manually adding gates
   };
 
   const clearCircuit = () => {
     setSelectedGates([]);
+    setActiveCircuit(null); // Clear active circuit when clearing
   };
 
   const simulateCircuit = () => {
@@ -52,9 +55,27 @@ const CircuitVisualization = () => {
     }
   ];
 
-  const loadExampleCircuit = (gates: string[]) => {
+  const loadExampleCircuit = (gates: string[], circuitName: string) => {
     setSelectedGates(gates);
+    setActiveCircuit(circuitName);
   };
+
+  // Check if current gates match any example circuit
+  useEffect(() => {
+    if (!isSimulating) {
+      // Check if current selectedGates matches any example circuit exactly
+      const matchingCircuit = exampleCircuits.find(circuit => 
+        circuit.gates.length === selectedGates.length &&
+        circuit.gates.every((gate, index) => gate === selectedGates[index])
+      );
+      
+      if (matchingCircuit && activeCircuit !== matchingCircuit.name) {
+        setActiveCircuit(matchingCircuit.name);
+      } else if (!matchingCircuit && activeCircuit !== null) {
+        setActiveCircuit(null);
+      }
+    }
+  }, [selectedGates, activeCircuit, isSimulating]);
 
   return (
     <div className="space-y-8">
@@ -85,12 +106,12 @@ const CircuitVisualization = () => {
               Quantum Gates
             </CardTitle>
             <CardDescription className="text-slate-300 space-y-2">
-              <div>Click to add gates to your circuit</div>
-              <div className="text-xs text-slate-400 mt-2">
+              <span className="block">Click to add gates to your circuit</span>
+              <span className="block text-xs text-slate-400 mt-2">
                 Each gate performs a specific <strong className="text-cyan-300">unitary transformation</strong> on qubits:
                 <strong className="text-blue-300">Single-qubit gates</strong> rotate individual qubits on the Bloch sphere,
                 while <strong className="text-purple-300">two-qubit gates</strong> like CNOT create entanglement between qubits.
-              </div>
+              </span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -254,8 +275,12 @@ const CircuitVisualization = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => loadExampleCircuit(circuit.gates)}
-                      className="w-full border-cyan-400/50 text-cyan-200 hover:bg-cyan-600/20"
+                      onClick={() => loadExampleCircuit(circuit.gates, circuit.name)}
+                      className={`w-full border-cyan-400/50 text-cyan-200 hover:bg-cyan-600/20 transition-all duration-300 ${
+                        activeCircuit === circuit.name 
+                          ? 'bg-cyan-600/40 border-cyan-300 text-cyan-100 shadow-lg shadow-cyan-500/25' 
+                          : ''
+                      }`}
                     >
                       Load Circuit
                     </Button>
