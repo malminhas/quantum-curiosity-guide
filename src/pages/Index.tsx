@@ -9,7 +9,7 @@ import QubitVisualization from "@/components/QubitVisualization";
 import GroverInterface from "@/components/GroverInterface";
 import QuantumConcepts from "@/components/QuantumConcepts";
 import CircuitVisualization from "@/components/CircuitVisualization";
-// import HardwareInterface from "@/components/HardwareInterface";
+import HardwareInterface from "@/components/HardwareInterface";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("concepts");
@@ -99,9 +99,7 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="hardware" className="space-y-6">
-            <div className="text-center py-8">
-              <p className="text-slate-400">Hardware interface temporarily disabled</p>
-            </div>
+            <HardwareInterface />
           </TabsContent>
 
           <TabsContent value="grover" className="space-y-6">
