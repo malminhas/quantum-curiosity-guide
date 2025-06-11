@@ -3,12 +3,55 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CircuitBoard, Play, RotateCcw, Zap } from "lucide-react";
+import { CircuitBoard, Play, RotateCcw, Zap, Trash2 } from "lucide-react";
+
+// Storage keys for persistence
+const CIRCUIT_STORAGE_KEYS = {
+  SELECTED_GATES: 'circuit_selected_gates',
+  ACTIVE_CIRCUIT: 'circuit_active_circuit'
+};
+
+// Helper functions for localStorage
+const saveCircuitToStorage = (key: string, value: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.warn('Failed to save circuit to localStorage:', error);
+  }
+};
+
+const loadCircuitFromStorage = (key: string, defaultValue: any): any => {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaultValue;
+  } catch (error) {
+    console.warn('Failed to load circuit from localStorage:', error);
+    return defaultValue;
+  }
+};
 
 const CircuitVisualization = () => {
   const [selectedGates, setSelectedGates] = useState<string[]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
   const [activeCircuit, setActiveCircuit] = useState<string | null>(null);
+
+  // Load persisted circuit state on component mount
+  useEffect(() => {
+    const persistedGates = loadCircuitFromStorage(CIRCUIT_STORAGE_KEYS.SELECTED_GATES, []);
+    const persistedActiveCircuit = loadCircuitFromStorage(CIRCUIT_STORAGE_KEYS.ACTIVE_CIRCUIT, null);
+
+    setSelectedGates(persistedGates);
+    setActiveCircuit(persistedActiveCircuit);
+  }, []);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    saveCircuitToStorage(CIRCUIT_STORAGE_KEYS.SELECTED_GATES, selectedGates);
+  }, [selectedGates]);
+
+  useEffect(() => {
+    saveCircuitToStorage(CIRCUIT_STORAGE_KEYS.ACTIVE_CIRCUIT, activeCircuit);
+  }, [activeCircuit]);
 
   const gates = [
     { name: "H", symbol: "H", description: "Hadamard Gate - Creates superposition", color: "blue" },
@@ -26,7 +69,11 @@ const CircuitVisualization = () => {
 
   const clearCircuit = () => {
     setSelectedGates([]);
-    setActiveCircuit(null); // Clear active circuit when clearing
+    setActiveCircuit(null);
+    
+    // Clear from localStorage
+    localStorage.removeItem(CIRCUIT_STORAGE_KEYS.SELECTED_GATES);
+    localStorage.removeItem(CIRCUIT_STORAGE_KEYS.ACTIVE_CIRCUIT);
   };
 
   const simulateCircuit = () => {

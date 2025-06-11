@@ -5,12 +5,69 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { RotateCcw, Zap, Binary } from "lucide-react";
 
+// Storage keys for persistence
+const QUBIT_STORAGE_KEYS = {
+  AMPLITUDE0: 'qubit_amplitude0',
+  AMPLITUDE1: 'qubit_amplitude1', 
+  PHASE: 'qubit_phase',
+  ACTIVE_PRESET: 'qubit_active_preset'
+};
+
+// Helper functions for localStorage
+const saveQubitToStorage = (key: string, value: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.warn('Failed to save qubit to localStorage:', error);
+  }
+};
+
+const loadQubitFromStorage = (key: string, defaultValue: any): any => {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaultValue;
+  } catch (error) {
+    console.warn('Failed to load qubit from localStorage:', error);
+    return defaultValue;
+  }
+};
+
 const QubitVisualization = () => {
   const [amplitude0, setAmplitude0] = useState([0.7]);
   const [amplitude1, setAmplitude1] = useState([0.7]);
   const [phase, setPhase] = useState([0]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Load persisted qubit state on component mount
+  useEffect(() => {
+    const persistedAmplitude0 = loadQubitFromStorage(QUBIT_STORAGE_KEYS.AMPLITUDE0, [0.7]);
+    const persistedAmplitude1 = loadQubitFromStorage(QUBIT_STORAGE_KEYS.AMPLITUDE1, [0.7]);
+    const persistedPhase = loadQubitFromStorage(QUBIT_STORAGE_KEYS.PHASE, [0]);
+    const persistedActivePreset = loadQubitFromStorage(QUBIT_STORAGE_KEYS.ACTIVE_PRESET, null);
+
+    setAmplitude0(persistedAmplitude0);
+    setAmplitude1(persistedAmplitude1);
+    setPhase(persistedPhase);
+    setActivePreset(persistedActivePreset);
+  }, []);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    saveQubitToStorage(QUBIT_STORAGE_KEYS.AMPLITUDE0, amplitude0);
+  }, [amplitude0]);
+
+  useEffect(() => {
+    saveQubitToStorage(QUBIT_STORAGE_KEYS.AMPLITUDE1, amplitude1);
+  }, [amplitude1]);
+
+  useEffect(() => {
+    saveQubitToStorage(QUBIT_STORAGE_KEYS.PHASE, phase);
+  }, [phase]);
+
+  useEffect(() => {
+    saveQubitToStorage(QUBIT_STORAGE_KEYS.ACTIVE_PRESET, activePreset);
+  }, [activePreset]);
 
   // Normalize amplitudes to ensure |α|² + |β|² = 1
   const normalizeAmplitudes = (a0: number, a1: number) => {
