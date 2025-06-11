@@ -43,19 +43,11 @@ locals {
     "/api"
   )
   
-  # Dynamic Vite base path - only use subdirectory for remote deployments
-  vite_base = var.environment == "local" ? "/" : (
-    local.is_subdirectory ? 
-    "/${var.subdirectory_name}/" : 
-    "/"
-  )
+  # Dynamic Vite base path - use subdirectory for both local and remote if specified
+  vite_base = local.is_subdirectory ? "/${var.subdirectory_name}/" : "/"
   
-  # Dynamic React Router basename - only use subdirectory for remote deployments  
-  vite_basename = var.environment == "local" ? "/" : (
-    local.is_subdirectory ? 
-    "/${var.subdirectory_name}/" : 
-    "/"
-  )
+  # Dynamic React Router basename - use subdirectory for both local and remote if specified
+  vite_basename = local.is_subdirectory ? "/${var.subdirectory_name}" : "/"
 }
 
 # Local cleanup resource to properly handle existing containers and network
