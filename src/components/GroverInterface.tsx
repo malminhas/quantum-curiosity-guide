@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,8 @@ import {
   AlertCircle, 
   CheckCircle, 
   Activity,
-  Info 
+  Info,
+  Trash2
 } from "lucide-react";
 import { 
   LineChart, 
@@ -84,6 +85,34 @@ interface IterationResult {
   final_amplification: number;
 }
 
+// Storage keys for persistence
+const STORAGE_KEYS = {
+  TARGET_STATE: 'grover_target_state',
+  SHOTS: 'grover_shots',
+  RESULT: 'grover_result',
+  ANALYSIS: 'grover_analysis',
+  ITERATIONS: 'grover_iterations'
+};
+
+// Helper functions for localStorage
+const saveToStorage = (key: string, value: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.warn('Failed to save to localStorage:', error);
+  }
+};
+
+const loadFromStorage = (key: string, defaultValue: any): any => {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaultValue;
+  } catch (error) {
+    console.warn('Failed to load from localStorage:', error);
+    return defaultValue;
+  }
+};
+
 const GroverInterface = () => {
   const [targetState, setTargetState] = useState("101010");
   const [shots, setShots] = useState(1000);
@@ -92,6 +121,42 @@ const GroverInterface = () => {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [iterations, setIterations] = useState<IterationResult | null>(null);
   const { toast } = useToast();
+
+  // Load persisted state on component mount
+  useEffect(() => {
+    const persistedTargetState = loadFromStorage(STORAGE_KEYS.TARGET_STATE, "101010");
+    const persistedShots = loadFromStorage(STORAGE_KEYS.SHOTS, 1000);
+    const persistedResult = loadFromStorage(STORAGE_KEYS.RESULT, null);
+    const persistedAnalysis = loadFromStorage(STORAGE_KEYS.ANALYSIS, null);
+    const persistedIterations = loadFromStorage(STORAGE_KEYS.ITERATIONS, null);
+
+    setTargetState(persistedTargetState);
+    setShots(persistedShots);
+    setResult(persistedResult);
+    setAnalysis(persistedAnalysis);
+    setIterations(persistedIterations);
+  }, [toast]);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.TARGET_STATE, targetState);
+  }, [targetState]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.SHOTS, shots);
+  }, [shots]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.RESULT, result);
+  }, [result]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.ANALYSIS, analysis);
+  }, [analysis]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.ITERATIONS, iterations);
+  }, [iterations]);
 
   const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8087";
 
@@ -206,6 +271,22 @@ const GroverInterface = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const clearResults = () => {
+    setResult(null);
+    setAnalysis(null);
+    setIterations(null);
+    
+    // Clear from localStorage
+    localStorage.removeItem(STORAGE_KEYS.RESULT);
+    localStorage.removeItem(STORAGE_KEYS.ANALYSIS);
+    localStorage.removeItem(STORAGE_KEYS.ITERATIONS);
+    
+    toast({
+      title: "Results Cleared",
+      description: "All Grover search results have been cleared.",
+    });
   };
 
   const exampleStates = [
@@ -370,6 +451,18 @@ const GroverInterface = () => {
                     </>
                   )}
                 </Button>
+                
+                {(result || analysis || iterations) && (
+                  <Button
+                    onClick={clearResults}
+                    variant="outline"
+                    size="icon"
+                    className="border-red-400/50 text-red-300 hover:bg-red-600/20"
+                    title="Clear Results"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
                 
                 <Dialog>
                   <DialogTrigger asChild>
