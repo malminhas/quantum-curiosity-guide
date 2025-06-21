@@ -26,3 +26,6 @@ dist-ssr
 local.env
 __pycache__
 terraform
+.ipynb_checkpoints
+GroverVisualization.tsx
+quantum.config.example
