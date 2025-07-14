@@ -7,7 +7,7 @@ import math
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Qiskit imports
 from qiskit import QuantumCircuit, transpile # type: ignore
@@ -1395,17 +1395,28 @@ async def get_ibm_job_status(
                     success_count = counts.get(target_state, 0)
                     success_rate = (success_count / total_shots) * 100
                     logger.info("[JobStatus] Target '%s': %d/%d (%.1f%%)", target_state, success_count, total_shots, success_rate)
-                # Use wall time (end_date - creation_date) in ms if available
+                # Use wall time (end_date - creation_date) in ms if available, else fallback to now
                 execution_time = 0
+                result_timestamp = None
                 logger.info("[JobStatus] creation_date: %s, end_date: %s", getattr(job, 'creation_date', None), getattr(job, 'end_date', None))
-                if hasattr(job, 'creation_date') and hasattr(job, 'end_date') and job.end_date and job.creation_date:
-                    execution_time = (job.end_date - job.creation_date).total_seconds() * 1000  # ms
+                now = datetime.now(timezone.utc)
+                if hasattr(job, 'creation_date') and job.creation_date:
+                    if hasattr(job, 'end_date') and job.end_date:
+                        execution_time = (job.end_date - job.creation_date).total_seconds() * 1000  # ms
+                        result_timestamp = job.end_date.isoformat()
+                    else:
+                        execution_time = (now - job.creation_date).total_seconds() * 1000  # ms
+                        result_timestamp = now.isoformat()
+                else:
+                    execution_time = 0
+                    result_timestamp = now.isoformat()
                 job_result.results = {
                     "counts": counts,
                     "success_rate": success_rate,
                     "target_state": target_state,
                     "total_shots": total_shots,
-                    "execution_time": execution_time
+                    "execution_time": execution_time,
+                    "timestamp": result_timestamp
                 }
                 logger.info("[JobStatus] Results extraction complete for job %s", job_id)
             except Exception as e:
