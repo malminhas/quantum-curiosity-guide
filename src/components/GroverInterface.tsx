@@ -311,7 +311,7 @@ const GroverInterface = () => {
           Grover's Quantum Search Algorithm
         </h2>
         <p className="text-slate-300 max-w-2xl mx-auto">
-          Experience the quantum advantage! Search unsorted databases with quadratic speedup over classical algorithms. 
+          Experience the quantum advantage! Search unsorted databases with quadratic speedup over classical algorithms.
           Supports 1-8 qubits (up to 256 possible states).
         </p>
       </div>
@@ -580,9 +580,9 @@ const GroverInterface = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300">Classical (worst case)</span>
                     <div className="text-right">
-                      <Badge variant="outline" className="border-red-400/50 text-red-300">
-                        {analysis.performance_comparison.classical_worst_case} tries
-                      </Badge>
+                    <Badge variant="outline" className="border-red-400/50 text-red-300">
+                      {analysis.performance_comparison.classical_worst_case} tries
+                    </Badge>
                       <div className="text-xs text-red-300/70 mt-1">
                         ~{(analysis.performance_comparison.classical_worst_case * 0.001).toFixed(analysis.performance_comparison.classical_worst_case >= 1000 ? 1 : 3)}ms
                       </div>
@@ -591,9 +591,9 @@ const GroverInterface = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300">Classical (average)</span>
                     <div className="text-right">
-                      <Badge variant="outline" className="border-yellow-400/50 text-yellow-300">
-                        {analysis.performance_comparison.classical_average_case} tries
-                      </Badge>
+                    <Badge variant="outline" className="border-yellow-400/50 text-yellow-300">
+                      {analysis.performance_comparison.classical_average_case} tries
+                    </Badge>
                       <div className="text-xs text-yellow-300/70 mt-1">
                         ~{(analysis.performance_comparison.classical_average_case * 0.001).toFixed(analysis.performance_comparison.classical_average_case >= 1000 ? 1 : 3)}ms
                       </div>
@@ -602,9 +602,9 @@ const GroverInterface = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300">Quantum (Grover's)</span>
                     <div className="text-right">
-                      <Badge variant="outline" className="border-green-400/50 text-green-300">
-                        {analysis.performance_comparison.quantum_grover} iterations
-                      </Badge>
+                    <Badge variant="outline" className="border-green-400/50 text-green-300">
+                      {analysis.performance_comparison.quantum_grover} iterations
+                    </Badge>
                       <div className="text-xs text-green-300/70 mt-1">
                         ~{(analysis.performance_comparison.quantum_grover * 0.1).toFixed(1)}ms
                       </div>

@@ -1236,46 +1236,36 @@ async def run_grover_on_ibm_hardware(request: IBMGroverRequest) -> IBMJobResult:
             transpiled_qc = transpile(qc, backend=backend, optimization_level=1)
             logger.info("Used fallback transpilation")
         
-        # Submit job using Session and Sampler with error handling
+        # Submit job using Qiskit Runtime V2 Sampler (no Session, no Options)
         try:
+            from qiskit_ibm_runtime import Sampler
+            logger.info("🚀 Creating Session and Sampler...")
             with Session(backend=backend) as session:
-                logger.info("🚀 Submitting Sampler job via Qiskit Runtime...")
-                
-                # Create Sampler with explicit options to handle frequency issues
-                from qiskit_ibm_runtime import Options
-                options = Options()
-                options.resilience_level = 1  # Add error mitigation
-                options.optimization_level = 1  # Moderate optimization
-                
-                sampler = Sampler(session=session, options=options)
+                sampler = Sampler()
+                logger.info("🚀 Submitting Sampler job via Qiskit Runtime V2 API...")
                 job = sampler.run([transpiled_qc], shots=request.shots)
-                
         except Exception as sampler_error:
-            logger.warning("Sampler with options failed: %s", str(sampler_error))
-            # Fallback to basic sampler
-            with Session(backend=backend) as session:
-                logger.info("🔄 Retrying with basic Sampler...")
-                sampler = Sampler(session=session)
-                job = sampler.run([transpiled_qc], shots=request.shots)
-            
-            # Store target state as job metadata (tags)
-            try:
-                job.tags = [f"target:{request.target_state}", f"shots:{request.shots}"]
-            except Exception as e:
-                logger.warning("Could not set job tags: %s", str(e))
-            
-            job_result = IBMJobResult(
-                job_id=job.job_id(),
-                status="QUEUED",
-                backend_name=backend.name,
-                creation_date=datetime.now().isoformat(),
-                queue_position=None,
-                estimated_completion_time=None,
-                results=None
+            logger.error("Failed to submit Sampler job: %s", str(sampler_error))
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to submit Sampler job: {str(sampler_error)}"
             )
-            
-            logger.info("Job submitted to IBM Quantum: %s", job.job_id())
-            return job_result
+        # Store target state as job metadata (tags) if possible
+        try:
+            job.tags = [f"target:{request.target_state}", f"shots:{request.shots}"]
+        except Exception as e:
+            logger.warning("Could not set job tags: %s", str(e))
+        job_result = IBMJobResult(
+            job_id=job.job_id(),
+            status="QUEUED",
+            backend_name=backend.name,
+            creation_date=datetime.now().isoformat(),
+            queue_position=None,
+            estimated_completion_time=None,
+            results=None
+        )
+        logger.info("Job submitted to IBM Quantum: %s", job.job_id())
+        return job_result
             
     except ImportError:
         logger.error("IBM Quantum Runtime not available")
@@ -1347,43 +1337,50 @@ async def get_ibm_job_status(
     logger.info("Checking status for job: %s", job_id)
     
     try:
-        # Extract API key from authorization header
-        if not authorization.startswith("Bearer "):
-            raise HTTPException(status_code=401, detail="Invalid authorization format")
-        
-        api_key = authorization.replace("Bearer ", "")
-        
-        # Import IBM Quantum Runtime
-        from qiskit_ibm_runtime import QiskitRuntimeService # type: ignore
-        from collections import Counter
-        
-        # Initialize service (following user's pattern)
-        service = QiskitRuntimeService(token=api_key, instance=instance, channel="ibm_quantum") 
-        backend = service.least_busy(operational=True, simulator=False, min_num_qubits=2)
-        
+        # Minimal essential logging for job status endpoint
+        try:
+            service = QiskitRuntimeService(instance=instance)
+        except Exception as svc_error:
+            logger.error("[JobStatus] Failed to create QiskitRuntimeService: %s", str(svc_error))
+            raise
+        try:
+            backend = service.least_busy(operational=True, simulator=False, min_num_qubits=2)
+        except Exception as be_error:
+            logger.error("[JobStatus] Failed to select backend: %s", str(be_error))
+            raise
         # Get job
-        job = service.job(job_id)
-        status = job.status()
-        
+        try:
+            job = service.job(job_id)
+        except Exception as job_error:
+            logger.error("[JobStatus] Failed to retrieve job: %s", str(job_error))
+            raise
+        try:
+            status = job.status()
+            status_name = status.name if hasattr(status, 'name') else str(status)
+        except Exception as status_error:
+            logger.error("[JobStatus] Failed to get job status: %s", str(status_error))
+            raise
         job_result = IBMJobResult(
             job_id=job_id,
-            status=status.name,
+            status=status_name,
             backend_name=job.backend().name,
             creation_date=job.creation_date.isoformat(),
             queue_position=getattr(status, 'queue_position', None),
             estimated_completion_time=None,
             results=None
         )
-        
         # If job is completed, extract results following user's pattern
-        if status.name == "DONE":
+        if status_name == "DONE":
             try:
-                # Step 3: Extract and process results from BitArray (user's pattern)
+                logger.info("[JobStatus] Job is DONE. Extracting results...")
                 result = job.result()
+                logger.info("[JobStatus] Job result object obtained.")
                 bit_array = result[0].data.meas
-                bitstrings = [b[::-1] for b in bit_array.to_labels()]  # Reverse bit order
-                counts = dict(Counter(bitstrings))
-                
+                logger.info("[JobStatus] bit_array extracted from result.")
+                counts = bit_array.get_counts()
+                # Reverse bit order to match frontend/target convention
+                counts = {bits[::-1]: n for bits, n in counts.items()}
+                logger.info("[JobStatus] Measurement counts: %s", counts)
                 # Extract target state from job tags if available
                 target_state = None
                 if hasattr(job, 'tags') and job.tags:
@@ -1391,21 +1388,18 @@ async def get_ibm_job_status(
                         if tag.startswith("target:"):
                             target_state = tag.split(":", 1)[1]
                             break
-                
                 total_shots = sum(counts.values())
                 success_rate = 0.0
-                
                 # Calculate success rate if we have the target state
                 if target_state:
                     success_count = counts.get(target_state, 0)
                     success_rate = (success_count / total_shots) * 100
-                    logger.info("📊 Target '%s': %d/%d (%.1f%%)", target_state, success_count, total_shots, success_rate)
-                
-                # Calculate execution time
+                    logger.info("[JobStatus] Target '%s': %d/%d (%.1f%%)", target_state, success_count, total_shots, success_rate)
+                # Use wall time (end_date - creation_date) in ms if available
                 execution_time = 0
-                if hasattr(job, 'time_per_step') and job.time_per_step():
-                    execution_time = sum(job.time_per_step().values())
-                
+                logger.info("[JobStatus] creation_date: %s, end_date: %s", getattr(job, 'creation_date', None), getattr(job, 'end_date', None))
+                if hasattr(job, 'creation_date') and hasattr(job, 'end_date') and job.end_date and job.creation_date:
+                    execution_time = (job.end_date - job.creation_date).total_seconds() * 1000  # ms
                 job_result.results = {
                     "counts": counts,
                     "success_rate": success_rate,
@@ -1413,12 +1407,9 @@ async def get_ibm_job_status(
                     "total_shots": total_shots,
                     "execution_time": execution_time
                 }
-                
-                logger.info("Job %s completed with success rate: %.1f%%", job_id, success_rate)
-                
+                logger.info("[JobStatus] Results extraction complete for job %s", job_id)
             except Exception as e:
-                logger.error("Failed to extract results for job %s: %s", job_id, str(e))
-        
+                logger.error("[JobStatus] Failed to extract results for job %s: %s", job_id, str(e), exc_info=True)
         return job_result
         
     except ImportError:

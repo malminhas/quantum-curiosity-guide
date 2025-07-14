@@ -289,9 +289,16 @@ const HardwareInterface = () => {
           
           if (data.status === "DONE" || data.status === "COMPLETED") {
             setQueueStartTime(null); // Clear queue tracking when complete
+            // Compute success rate from counts and current targetState
+            let computedSuccessRate = 0;
+            if (data.results && data.results.counts) {
+              const totalShots = data.results.total_shots || Object.values(data.results.counts).reduce((a, b) => a + b, 0);
+              const successCount = data.results.counts[targetState] || 0;
+              computedSuccessRate = totalShots > 0 ? (successCount / totalShots) * 100 : 0;
+            }
             toast({
               title: "Job Completed",
-              description: `Grover circuit finished with ${data.results?.success_rate.toFixed(1)}% success rate`,
+              description: `Grover circuit finished with ${computedSuccessRate.toFixed(1)}% success rate`,
             });
             return;
           } else if (data.status === "ERROR" || data.status === "CANCELLED" || data.status === "FAILED") {
@@ -600,6 +607,40 @@ const HardwareInterface = () => {
                                 <span>{count}</span>
                               </div>
                             ))}
+                          </div>
+                        </div>
+                        {/* Histogram Visualization */}
+                        <div className="mt-4">
+                          <span className="text-sm font-medium">Histogram:</span>
+                          <div className="space-y-2 mt-2">
+                            {(() => {
+                              const total = jobResult.results.total_shots || Object.values(jobResult.results.counts).reduce((a, b) => a + b, 0);
+                              const target = jobResult.results.target_state;
+                              return Object.entries(jobResult.results.counts)
+                                .sort(([, a], [, b]) => b - a)
+                                .map(([state, count]) => {
+                                  const percentage = (count / total) * 100;
+                                  const isTarget = state === target;
+                                  return (
+                                    <div key={state} className="space-y-1">
+                                      <div className="flex justify-between items-center">
+                                        <span className={`font-mono ${isTarget ? 'text-green-400 font-bold' : 'text-slate-300'}`}>|{state}⟩ {isTarget && '(TARGET)'}</span>
+                                        <span className={`text-xs ${isTarget ? 'text-green-300' : 'text-slate-400'}`}>{count} ({percentage.toFixed(1)}%)</span>
+                                      </div>
+                                      <div className="w-full bg-slate-700 rounded-full h-2">
+                                        <div
+                                          className={
+                                            isTarget
+                                              ? 'bg-gradient-to-r from-green-500 to-green-400 h-2 rounded-full transition-all duration-300'
+                                              : 'bg-gradient-to-r from-blue-500 to-blue-400 h-2 rounded-full transition-all duration-300'
+                                          }
+                                          style={{ width: `${percentage}%` }}
+                                        ></div>
+                                      </div>
+                                    </div>
+                                  );
+                                });
+                            })()}
                           </div>
                         </div>
                       </div>
