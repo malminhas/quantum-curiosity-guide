@@ -47,8 +47,13 @@ fi
 
 # Set default subdirectory if not provided
 if [[ -z "$SUBDIRECTORY" ]]; then
-    SUBDIRECTORY="quantum"
-    log_info "No subdirectory specified, using default: $SUBDIRECTORY"
+    if [[ "$ENVIRONMENT" == "local" ]]; then
+        SUBDIRECTORY=""
+        log_info "No subdirectory specified, using root for local deployment."
+    else
+        SUBDIRECTORY="quantum"
+        log_info "No subdirectory specified, using default: $SUBDIRECTORY"
+    fi
 fi
 
 log_info "Starting deployment of Quantum Computing Application"
